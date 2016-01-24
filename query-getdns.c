@@ -35,9 +35,8 @@
 
 struct addrinfo *addresses = NULL;
 
-struct addrinfo *insert_addrinfo(current, new)
-     struct addrinfo *current;
-     struct addrinfo *new;
+struct addrinfo *
+insert_addrinfo(struct addrinfo *current, struct addrinfo *new)
 {
     if (current == NULL)
         addresses = new;
@@ -416,7 +415,7 @@ int do_dns_queries(const char *hostname, const char *port)
     qip->qname = hostname;
     qip->qtype = GETDNS_RRTYPE_A;
     qip->port = port_int;
-    rc = getdns_address(context, hostname, extensions, 
+    rc = getdns_address(context, hostname, NULL, 
 			(void *) qip, &tid, cb_address);
     if (rc != GETDNS_RETURN_GOOD) {
 	fprintf(stderr, "ERROR: %s getdns_address failed: %s\n", 

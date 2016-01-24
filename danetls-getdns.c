@@ -2,18 +2,7 @@
  * Program to test new OpenSSL DANE verification code (2016-01).
  * Requires OpenSSL 1.1.0-pre2 or later.
  *
- * Uses getaddrinfo() to query address records.
- * Uses libldns to query TLSA records, assuming trusted path to validating
- * resolver that returns AD bit for authenticated results, when we query
- * with AD=1.
- * Connects to given host and port, establishes TLS session, and 
- * attempts to authenticate peer with DANE first, and lacking TLSA
- * records, failing back to normal PKIX authentication.
- *
- * Command line options can specify whether to do DANE or PKIX modes,
- * an alternate certificate store file, and what STARTTLS application 
- * protocol should be used (currently there is STARTTLS support for SMTP
- * and XMPP only - the most widely deployed DANE STARTTLS applications).
+ * This version uses getdns to query the DNS records.
  *
  * Author: Shumon Huque <shuque@gmail.com>
  */
@@ -30,8 +19,6 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 #include <netdb.h>
-
-#include <ldns/ldns.h>
 
 #include <openssl/ssl.h>
 #include <openssl/err.h>
