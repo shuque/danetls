@@ -134,6 +134,83 @@ Cipher: TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384
 DANE TLSA 3 1 1 [687c07fbe249...] matched EE certificate at depth 0
 ```
 
+Checking the XMPP (s2s) service at debian.org:
+(_xmpp-server SRV record points to the host: voler.debian.org)
+```
+$ danetls -s xmpp-server -n debian.org vogler.debian.org
+Connecting to IPv6 address: 2001:41b8:202:deb:1b1b::92 port 5269
+TLSv1.2 handshake succeeded.
+Cipher: TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384
+DANE TLSA 3 1 1 [bcafdcc89ec7...] matched EE certificate at depth 0
+
+Connecting to IPv4 address: 82.195.75.92 port 5269
+TLSv1.2 handshake succeeded.
+Cipher: TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384
+DANE TLSA 3 1 1 [bcafdcc89ec7...] matched EE certificate at depth 0
+```
+
+Checking with debugging (-d) SMTP service at mail.ietf.org
+(Prints details of the SMTP conversation prior to TLS):
+```
+$ ./danetls -d -s smtp mail.ietf.org 25
+TLSA records found: 1
+TLSA: 3 1 1 0c72ac70b745ac19998811b131d662c9ac69dbdbe7cb23e5b514b56664c5d3d6
+
+Connecting to IPv6 address: 2001:1900:3001:11::2c port 25
+recv: 220 ietfa.amsl.com ESMTP Postfix
+send: EHLO cheetara.huque.com
+recv: 250-ietfa.amsl.com
+recv: 250-PIPELINING
+recv: 250-SIZE 67108864
+recv: 250-ETRN
+recv: 250-STARTTLS
+recv: 250-AUTH PLAIN LOGIN
+recv: 250-AUTH=PLAIN LOGIN
+recv: 250-ENHANCEDSTATUSCODES
+recv: 250 8BITMIME
+send: STARTTLS
+recv: 220 2.0.0 Ready to start TLS
+TLSv1.2 handshake succeeded.
+Cipher: TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384
+Certificate chain:
+ 0 Subject: /OU=Domain Control Validated/CN=*.ietf.org
+   Issuer : /C=US/ST=Arizona/L=Scottsdale/O=Starfield Technologies, Inc./OU=http://certs.starfieldtech.com/repository//CN=Starfield Secure Certificate Authority - G2
+ 1 Subject: /C=US/ST=Arizona/L=Scottsdale/O=Starfield Technologies, Inc./OU=http://certs.starfieldtech.com/repository//CN=Starfield Secure Certificate Authority - G2
+   Issuer : /C=US/ST=Arizona/L=Scottsdale/O=Starfield Technologies, Inc./CN=Starfield Root Certificate Authority - G2
+ 2 Subject: /C=US/ST=Arizona/L=Scottsdale/O=Starfield Technologies, Inc./CN=Starfield Root Certificate Authority - G2
+   Issuer : /C=US/O=Starfield Technologies, Inc./OU=Starfield Class 2 Certification Authority
+ 3 Subject: /C=US/O=Starfield Technologies, Inc./OU=Starfield Class 2 Certification Authority
+   Issuer : /C=US/O=Starfield Technologies, Inc./OU=Starfield Class 2 Certification Authority
+DANE TLSA 3 1 1 [0c72ac70b745...] matched EE certificate at depth 0
+
+Connecting to IPv4 address: 4.31.198.44 port 25
+recv: 220 ietfa.amsl.com ESMTP Postfix
+send: EHLO cheetara.huque.com
+recv: 250-ietfa.amsl.com
+recv: 250-PIPELINING
+recv: 250-SIZE 67108864
+recv: 250-ETRN
+recv: 250-STARTTLS
+recv: 250-AUTH PLAIN LOGIN
+recv: 250-AUTH=PLAIN LOGIN
+recv: 250-ENHANCEDSTATUSCODES
+recv: 250 8BITMIME
+send: STARTTLS
+recv: 220 2.0.0 Ready to start TLS
+TLSv1.2 handshake succeeded.
+Cipher: TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384
+Certificate chain:
+ 0 Subject: /OU=Domain Control Validated/CN=*.ietf.org
+   Issuer : /C=US/ST=Arizona/L=Scottsdale/O=Starfield Technologies, Inc./OU=http://certs.starfieldtech.com/repository//CN=Starfield Secure Certificate Authority - G2
+ 1 Subject: /C=US/ST=Arizona/L=Scottsdale/O=Starfield Technologies, Inc./OU=http://certs.starfieldtech.com/repository//CN=Starfield Secure Certificate Authority - G2
+   Issuer : /C=US/ST=Arizona/L=Scottsdale/O=Starfield Technologies, Inc./CN=Starfield Root Certificate Authority - G2
+ 2 Subject: /C=US/ST=Arizona/L=Scottsdale/O=Starfield Technologies, Inc./CN=Starfield Root Certificate Authority - G2
+   Issuer : /C=US/O=Starfield Technologies, Inc./OU=Starfield Class 2 Certification Authority
+ 3 Subject: /C=US/O=Starfield Technologies, Inc./OU=Starfield Class 2 Certification Authority
+   Issuer : /C=US/O=Starfield Technologies, Inc./OU=Starfield Class 2 Certification Authority
+DANE TLSA 3 1 1 [0c72ac70b745...] matched EE certificate at depth 0
+```
+
 ### Other modes
 
 TBD ...
