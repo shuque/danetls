@@ -156,7 +156,7 @@ int main(int argc, char **argv)
 
     const char *progname, *hostname, *port;
     struct addrinfo gai_hints;
-    struct addrinfo *gai_result, *gaip;
+    struct addrinfo *gai_result = NULL, *gaip;
     char ipstring[INET6_ADDRSTRLEN], *cp;
     struct sockaddr_in *sa4;
     struct sockaddr_in6 *sa6;
@@ -165,9 +165,9 @@ int main(int argc, char **argv)
     long rcl;
     tlsa_rdata *tlsa_rdata_list = NULL;
 
-    SSL_CTX *ctx;
-    SSL *ssl;
-    const SSL_CIPHER *cipher;
+    SSL_CTX *ctx = NULL;
+    SSL *ssl = NULL;
+    const SSL_CIPHER *cipher = NULL;
     X509_VERIFY_PARAM *vpm = NULL;
     BIO *sbio;
 
@@ -419,9 +419,12 @@ int main(int argc, char **argv)
     }
 
 cleanup:
+    freeaddrinfo(gai_result);
     free_tlsa(tlsa_rdata_list);
-    X509_VERIFY_PARAM_free(vpm);
-    SSL_CTX_free(ctx);
+    if (ctx) {
+	X509_VERIFY_PARAM_free(vpm);
+	SSL_CTX_free(ctx);
+    }
 
     /* Returns 0 if at least one SSL peer authenticates */
     return return_status;

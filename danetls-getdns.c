@@ -163,9 +163,9 @@ int main(int argc, char **argv)
     int rc, sock, optcount;
     long rcl;
 
-    SSL_CTX *ctx;
-    SSL *ssl;
-    const SSL_CIPHER *cipher;
+    SSL_CTX *ctx = NULL;
+    SSL *ssl = NULL;
+    const SSL_CIPHER *cipher = NULL;
     X509_VERIFY_PARAM *vpm = NULL;
     BIO *sbio;
 
@@ -406,8 +406,10 @@ int main(int argc, char **argv)
 
 cleanup:
     free_tlsa(tlsa_rdata_list);
-    X509_VERIFY_PARAM_free(vpm);
-    SSL_CTX_free(ctx);
+    if (ctx) {
+	X509_VERIFY_PARAM_free(vpm);
+	SSL_CTX_free(ctx);
+    }
 
     /* Returns 0 if at least one SSL peer authenticates */
     return return_status;
