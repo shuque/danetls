@@ -29,6 +29,8 @@
 #include "query-getdns.h"
 
 
+extern int recursion;
+
 /*
  * addresses: (head of) linked list of addrinfo structures
  */
@@ -54,9 +56,8 @@ insert_addrinfo(struct addrinfo *current, struct addrinfo *new)
 size_t tlsa_count = 0;
 tlsa_rdata *tlsa_rdata_list = NULL;
 
-tlsa_rdata *insert_tlsa_rdata(current, new)
-     tlsa_rdata *current;
-     tlsa_rdata *new;
+tlsa_rdata *
+insert_tlsa_rdata(tlsa_rdata *current, tlsa_rdata *new)
 {
     if (current == NULL)
         tlsa_rdata_list = new;
@@ -385,7 +386,8 @@ int do_dns_queries(const char *hostname, const char *port)
 	return 0;
     }
 
-    getdns_context_set_resolution_type(context, GETDNS_RESOLUTION_STUB);
+    if (!recursion)
+	getdns_context_set_resolution_type(context, GETDNS_RESOLUTION_STUB);
 
     if (! (extensions = getdns_dict_create())) {
 	fprintf(stderr, "FAIL: Error creating extensions dict\n");

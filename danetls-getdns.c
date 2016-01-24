@@ -39,6 +39,7 @@ enum AUTH_MODE {
 };
 
 int debug = 0;
+int recursion = 0;
 enum AUTH_MODE auth_mode = MODE_BOTH;
 char *CAfile = NULL;
 char *service_name = NULL;
@@ -53,6 +54,7 @@ void print_usage(const char *progname)
     fprintf(stdout, "\nUsage: %s [options] <hostname> <portnumber>\n\n"
             "       -h:             print this help message\n"
             "       -d:             debug mode\n"
+            "       -r:             use getdns in full recursion mode\n"
 	    "       -n <name>:      service name\n"
 	    "       -c <cafile>:    CA file\n"
             "       -m <dane|pkix>: dane or pkix mode\n"
@@ -73,10 +75,11 @@ int parse_options(const char *progname, int argc, char **argv)
 {
     int opt;
 
-    while ((opt = getopt(argc, argv, "hdn:c:m:s:")) != -1) {
+    while ((opt = getopt(argc, argv, "hdrn:c:m:s:")) != -1) {
         switch(opt) {
         case 'h': print_usage(progname); break;
         case 'd': debug = 1; break;
+        case 'r': recursion = 1; break;
 	case 'n':
 	    service_name = optarg; break;
 	case 'c':
