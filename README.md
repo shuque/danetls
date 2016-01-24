@@ -15,7 +15,7 @@ an alternate certificate store file, and what STARTTLS application
 protocol should be used (currently there is STARTTLS support for SMTP
 and XMPP only - the two most widely deployed DANE STARTTLS applications).
 
-There are two versions of this program. "danetls", which uses libdns 
+There are two versions of this program. "danetls", which uses ldns 
 to perform the DNS queries, and "danetls-getdns", which uses the 
 getdns library instead. The ldns version assumes the use of validating 
 DNS resolver to which we have a trusted connection, and checks the 
@@ -110,7 +110,7 @@ DANE TLSA 3 1 1 [b760c12119c3...] matched EE certificate at depth 0
 
 Checking the HTTPS server at www.amazon.com (no TLSA records):
 ```
-$ ./danetls www.amazon.com 443
+$ danetls www.amazon.com 443
 No TLSA records found; Performing PKIX-only validation.
 
 Connecting to IPv4 address: 54.239.25.200 port 443
@@ -152,7 +152,7 @@ DANE TLSA 3 1 1 [bcafdcc89ec7...] matched EE certificate at depth 0
 Checking with debugging (-d) SMTP service at mail.ietf.org
 (Prints details of the SMTP conversation prior to TLS):
 ```
-$ ./danetls -d -s smtp mail.ietf.org 25
+$ danetls -d -s smtp mail.ietf.org 25
 TLSA records found: 1
 TLSA: 3 1 1 0c72ac70b745ac19998811b131d662c9ac69dbdbe7cb23e5b514b56664c5d3d6
 
@@ -209,6 +209,30 @@ Certificate chain:
  3 Subject: /C=US/O=Starfield Technologies, Inc./OU=Starfield Class 2 Certification Authority
    Issuer : /C=US/O=Starfield Technologies, Inc./OU=Starfield Class 2 Certification Authority
 DANE TLSA 3 1 1 [0c72ac70b745...] matched EE certificate at depth 0
+```
+
+Checking with debugging (-d) XMPP s2s service at mailbox.org (xmpp.mailbox.org)
+(Prints details of the SMTP conversation prior to TLS):
+```
+$ danetls -d -s xmpp-server -n mailbox.org xmpp.mailbox.org 5269
+TLSA records found: 1
+TLSA: 3 1 1 4758af6f02dfb5dc8795fa402e77a8a0486af5e85d2ca60c294476aadc40b220
+
+Connecting to IPv4 address: 80.241.60.206 port 5269
+send: <?xml version='1.0'?><stream:stream to='mailbox.org' version='1.0' xml:lang='en' xmlns='jabber:server' xmlns:stream='http://etherx.jabber.org/streams'>
+recv: <?xml version='1.0'?><stream:stream xmlns:db='jabber:server:dialback' xmlns:stream='http://etherx.jabber.org/streams' version='1.0' from='mailbox.org' id='113d3aef-7495-4d5b-a030-09885afe3046' to='' xml:lang='en' xmlns='jabber:server'><stream:features><dialback xmlns='urn:xmpp:features:dialback'/><starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'><required/></starttls></stream:features>
+send: <starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>
+recv: <proceed xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>
+TLSv1.2 handshake succeeded.
+Cipher: TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384
+Certificate chain:
+ 0 Subject: /OU=Domain Validated Only/CN=*.mailbox.org
+   Issuer : /C=CH/O=SwissSign AG/CN=SwissSign Server Silver CA 2014 - G22
+ 1 Subject: /C=CH/O=SwissSign AG/CN=SwissSign Server Silver CA 2014 - G22
+   Issuer : /C=CH/O=SwissSign AG/CN=SwissSign Silver CA - G2
+ 2 Subject: /C=CH/O=SwissSign AG/CN=SwissSign Silver CA - G2
+   Issuer : /C=CH/O=SwissSign AG/CN=SwissSign Silver CA - G2
+DANE TLSA 3 1 1 [4758af6f02df...] matched EE certificate at depth 0
 ```
 
 ### Other modes
