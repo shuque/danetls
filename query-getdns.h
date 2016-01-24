@@ -10,7 +10,7 @@
  * callback functions.
  */
 typedef struct qinfo {
-    const char *qname;
+    char *qname;
     uint16_t qtype;
     uint16_t port;
 } qinfo;
@@ -47,6 +47,6 @@ tlsa_rdata *tlsa_rdata_list;
 tlsa_rdata *insert_tlsa_rdata(tlsa_rdata *current, tlsa_rdata *new);
 void free_tlsa(tlsa_rdata *head);
 
-int do_dns_queries(const char *hostname, const char *port);
+int do_dns_queries(char *hostname, char *port);
 
 #endif /* __QUERY_GETDNS_H__ */

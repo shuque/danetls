@@ -47,6 +47,53 @@ insert_addrinfo(struct addrinfo *current, struct addrinfo *new)
     return new;
 }
 
+struct addrinfo *make_addrinfo(getdns_dict *address, 
+			       char *hostname, uint16_t port)
+{
+    getdns_return_t rc;
+    getdns_bindata *addr_type, *addr_data;
+    struct addrinfo *aip = NULL;
+
+    if ((rc = getdns_dict_get_bindata(address, "address_type",
+				      &addr_type))) {
+	fprintf(stderr, "FAIL: %s: getting addr_type: %s\n",
+		hostname, getdns_get_errorstr_by_id(rc));
+	return NULL;
+    }
+
+    if ((rc = getdns_dict_get_bindata(address, "address_data",
+				      &addr_data))) {
+	fprintf(stderr, "FAIL: %s: getting addr_data: %s\n",
+		hostname, getdns_get_errorstr_by_id(rc));
+	return NULL;
+    }
+
+    aip = malloc(sizeof(struct addrinfo));
+    aip->ai_next = NULL;
+
+    if (!strncmp((const char *) addr_type->data, "IPv4", 4)) {
+	struct sockaddr_in *sa4 = malloc(sizeof(struct sockaddr_storage));
+	aip->ai_family = sa4->sin_family = AF_INET;
+	sa4->sin_port = htons(port);
+	memcpy(&(sa4->sin_addr), addr_data->data, addr_data->size);
+	aip->ai_addr = (struct sockaddr *) sa4;
+	aip->ai_addrlen = sizeof(struct sockaddr_in);
+    } else if (!strncmp((const char *) addr_type->data, "IPv6", 4)) {
+	struct sockaddr_in6 *sa6 = malloc(sizeof(struct sockaddr_storage));
+	aip->ai_family = sa6->sin6_family = AF_INET6;
+	sa6->sin6_port = htons(port);
+	memcpy(&(sa6->sin6_addr), addr_data->data, addr_data->size);
+	aip->ai_addr = (struct sockaddr *) sa6;
+	aip->ai_addrlen = sizeof(struct sockaddr_in6);
+    } else  {
+	/* shouldn't get here */
+	fprintf(stderr, "FAIL: Unknown address type\n");
+        free(aip);
+	return NULL;
+    }
+    return aip;
+}
+
 
 /*
  * tlsa_rdata: structure to hold TLSA record rdata.
@@ -96,12 +143,11 @@ void cb_address(getdns_context *ctx,
     getdns_return_t rc;
     uint32_t status;
     qinfo *qip = (qinfo *) userarg;
-    const char *hostname = qip->qname;
+    char *hostname = qip->qname;
     uint16_t port = qip->port;
     getdns_list    *just_addresses;
     size_t         cnt_addr;
     getdns_dict    *address;
-    getdns_bindata *addr_type, *addr_data;
 
     switch (cb_type) {
     case GETDNS_CALLBACK_COMPLETE:
@@ -153,50 +199,15 @@ void cb_address(getdns_context *ctx,
 
     for (i = 0; i < cnt_addr; i++) {
 
-	struct addrinfo *aip = malloc(sizeof(struct addrinfo));
-
+	struct addrinfo *aip = NULL;
 	if ((rc = getdns_list_get_dict(just_addresses, i, &address))) {
 	    fprintf(stderr, "FAIL: %s: getting address dict: %s\n", 
 		    hostname, getdns_get_errorstr_by_id(rc));
 	    break;
 	}
-
-	if ((rc = getdns_dict_get_bindata(address, "address_type", 
-					  &addr_type))) {
-	    fprintf(stderr, "FAIL: %s: getting addr_type: %s\n", 
-		    hostname, getdns_get_errorstr_by_id(rc));
-	    break;
-	}
-
-	if ((rc = getdns_dict_get_bindata(address, "address_data", 
-					  &addr_data))) {
-	    fprintf(stderr, "FAIL: %s: getting addr_data: %s\n", 
-		    hostname, getdns_get_errorstr_by_id(rc));
-	    break;
-	}
-
-	if (!strncmp((const char *) addr_type->data, "IPv4", 4)) {
-	    struct sockaddr_in *sa4 = malloc(sizeof(struct sockaddr_storage));
-	    aip->ai_family = AF_INET;
-	    memcpy(&(sa4->sin_addr), addr_data->data, addr_data->size);
-	    sa4->sin_family = AF_INET;
-	    sa4->sin_port = htons(port);
-	    aip->ai_addr = (struct sockaddr *) sa4;
-	    aip->ai_addrlen = sizeof(struct sockaddr_in);
-	} else if (!strncmp((const char *) addr_type->data, "IPv6", 4)) {
-	    struct sockaddr_in6 *sa6 = malloc(sizeof(struct sockaddr_storage));
-	    aip->ai_family = AF_INET6;
-	    memcpy(&(sa6->sin6_addr), addr_data->data, addr_data->size);
-	    sa6->sin6_family = AF_INET6;
-	    sa6->sin6_port = htons(port);
-	    aip->ai_addr = (struct sockaddr *) sa6;
-	    aip->ai_addrlen = sizeof(struct sockaddr_in6);
-	} else  {
-	    /* shouldn't get here */
-	    fprintf(stderr, "FAIL: Unknown address type\n");
-	    break;
-	}
-	aip->ai_next = NULL;
+	aip = make_addrinfo(address, hostname, port);
+	if (! aip)
+	    continue;
 	current = insert_addrinfo(current, aip);
 
     }
@@ -222,7 +233,7 @@ void cb_tlsa(getdns_context *ctx,
     getdns_return_t rc;
     uint32_t status;
     qinfo *qip = (qinfo *) userarg;
-    const char *hostname = qip->qname;
+    char *hostname = qip->qname;
     getdns_list    *replies_tree, *answer;
     size_t         i, j, num_replies, num_answers;
     getdns_dict    *reply;
@@ -367,7 +378,7 @@ cleanup:
  * populate address and TLSA set data structures.
  */
 
-int do_dns_queries(const char *hostname, const char *port)
+int do_dns_queries(char *hostname, char *port)
 {
 
     char domainstring[512];
