@@ -28,7 +28,7 @@
 
 #include "query-getdns.h"
 
-
+extern int debug;
 extern int recursion;
 
 /*
@@ -167,12 +167,9 @@ void cb_address(getdns_context *ctx,
 	goto cleanup;
     }
 
-    if (status == 903) {
-	fprintf(stderr, "FAIL: %s No secure responses obtained\n", 
-		hostname);
-	goto cleanup;
-    } else if (status == 901) {
-	fprintf(stderr, "FAIL: %s Non existent domain name\n", hostname);
+    if (status != 900) {
+	fprintf(stderr, "FAIL: %s: %s\n",
+		hostname, getdns_get_errorstr_by_id(status));
 	goto cleanup;
     }
 
@@ -256,12 +253,10 @@ void cb_tlsa(getdns_context *ctx,
 	goto cleanup;
     }
 
-    if (status == 903) {
-	fprintf(stderr, "FAIL: %s No secure responses obtained\n", 
-		hostname);
-	goto cleanup;
-    } else if (status == 901) {
-	fprintf(stderr, "FAIL: %s Non existent domain name\n", hostname);
+    if (status != 900) {
+	if (debug)
+	    fprintf(stderr, "FAIL: %s: %s\n",
+		    hostname, getdns_get_errorstr_by_id(status));
 	goto cleanup;
     }
 
@@ -279,7 +274,7 @@ void cb_tlsa(getdns_context *ctx,
     }
 
     if (num_replies <= 0) {
-	printf("FAIL: %s: No addresses found.\n", hostname);
+	printf("FAIL: %s: No TLSA records found.\n", hostname);
 	goto cleanup;
     }
 
@@ -322,8 +317,6 @@ void cb_tlsa(getdns_context *ctx,
 	    }
 
 	    if (rrtype != GETDNS_RRTYPE_TLSA) continue;
-	    
-	    tlsa_count++;
 	    
 	    if ((rc = getdns_dict_get_int(rr, "/rdata/certificate_usage", 
 					  &usage))) {
