@@ -135,11 +135,11 @@ void print_cert_chain(SSL *ssl)
 
     fprintf(stdout, "Certificate chain:\n");
     for (i = 0; i < sk_X509_num(chain); i++) {
-	X509_NAME_oneline(X509_get_subject_name(sk_X509_value(chain, i)),
-			  buffer, sizeof buffer);
+	X509_NAME_get_text_by_NID(X509_get_subject_name(sk_X509_value(chain, i)),
+				  NID_commonName, buffer, sizeof buffer);
 	fprintf(stdout, "%2d Subject: %s\n", i, buffer);
-	X509_NAME_oneline(X509_get_issuer_name(sk_X509_value(chain, i)),
-			  buffer, sizeof buffer);
+	X509_NAME_get_text_by_NID(X509_get_issuer_name(sk_X509_value(chain, i)),
+				  NID_commonName, buffer, sizeof buffer);
 	fprintf(stdout, "   Issuer : %s\n", buffer);
     }
     /* TODO: how to free stack of certs? */
