@@ -1,17 +1,26 @@
+PREFIX		= /usr/local
+BINDIR		= $(PREFIX)/bin
+SBINDIR		= $(PREFIX)/sbin
+LIBDIR		= $(PREFIX)/lib
+INCLUDEDIR	= $(PREFIX)/include
+
+INSTALL		= ./install-sh
+INSTALL_PROG	= $(INSTALL)
+INSTALL_DATA	= $(INSTALL) -m 644
+
 PROG    = danetls danetls-getdns
+#PROG    = danetls danetls-getdns chainclient chainserver
+
 INCLUDE = -I. -I/usr/local/openssl/include -I/usr/local/include
-# -stc=c99 won't find getaddrinfo definitions, alas
-# Workaround if needed: -std=gnu99 or -D_POSIX_C_SOURCE=200112L
-#CFLAGS  = -g -std=c99 -Wall -Wextra $(INCLUDE)
 CFLAGS  = -g -Wall -Wextra $(INCLUDE)
 LDFLAGS = -L/usr/local/openssl/lib -L/usr/local/lib -Wl,-rpath -Wl,/usr/local/openssl/lib -Wl,-rpath -Wl,/usr/local/lib
 LIBS_LDNS    = -lssl -lcrypto -lldns
 LIBS_GETDNS  = -lssl -lcrypto -lldns -lgetdns_ext_event -lgetdns -levent_core -lunbound -lidn
 CC      = cc
 
-# This works for Mac OS X
-#LDFLAGS = -L/usr/local/openssl/lib -L/usr/local/lib
-#LIBS    = -lssl -lcrypto -lldns -lgetdns_ext_event -lgetdns -levent_core -lunbound -lidn -ldl
+# For Mac OS X
+#LDFLAGS = -L/usr/local/lib
+
 
 all:		$(PROG)
 
@@ -20,6 +29,15 @@ danetls:	danetls.o query-ldns.o utils.o starttls.o
 
 danetls-getdns:	danetls-getdns.o query-getdns.o utils.o starttls.o
 		$(CC) $(LDFLAGS) -o $@ $^ $(LIBS_GETDNS)
+
+chainclient:	chainclient.o query-ldns.o utils.o starttls.o
+		$(CC) $(LDFLAGS) -o $@ $^ $(LIBS_LDNS)
+
+chainserver:	chainserver.o query-ldns.o utils.o
+		$(CC) $(LDFLAGS) -o $@ $^ $(LIBS_LDNS)
+
+install:	$(PROG)
+		$(INSTALL_PROG) $(PROG) $(BINDIR)
 
 .PHONY:		clean count
 clean:
