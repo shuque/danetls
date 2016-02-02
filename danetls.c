@@ -74,7 +74,7 @@ void print_usage(const char *progname)
 	    "                       ('smtp', 'xmpp-client', 'xmpp-server')\n"
 	    "\n",
 	    progname);
-    exit(1);
+    exit(3);
 }
 
 
@@ -132,6 +132,7 @@ void print_cert_chain(SSL *ssl)
     int i;
     char buffer[1024];
     STACK_OF(X509) *chain = SSL_get_peer_cert_chain(ssl);
+    STACK_OF(GENERAL_NAME) *subjectaltnames = NULL;
 
     fprintf(stdout, "Certificate chain:\n");
     for (i = 0; i < sk_X509_num(chain); i++) {
@@ -142,6 +143,21 @@ void print_cert_chain(SSL *ssl)
 				  NID_commonName, buffer, sizeof buffer);
 	fprintf(stdout, "   Issuer : %s\n", buffer);
     }
+
+    subjectaltnames = X509_get_ext_d2i(
+                                       (X509 *) sk_X509_value(chain, 0),
+                                       NID_subject_alt_name, NULL, NULL);
+    if (subjectaltnames) {
+        int san_count = sk_GENERAL_NAME_num(subjectaltnames);
+        for (i = 0; i < san_count; i++) {
+            const GENERAL_NAME *name = sk_GENERAL_NAME_value(subjectaltnames, i);
+            if (name->type == GEN_DNS) {
+                char *dns_name = (char *) ASN1_STRING_data(name->d.dNSName);
+                fprintf(stdout, " SAN dNSName: %s\n", dns_name);
+            }
+        }
+    }
+
     /* TODO: how to free stack of certs? */
     return;
 }
@@ -160,7 +176,7 @@ int main(int argc, char **argv)
     char ipstring[INET6_ADDRSTRLEN], *cp;
     struct sockaddr_in *sa4;
     struct sockaddr_in6 *sa6;
-    int return_status = 1;                    /* program return status */
+    int count_success = 0, count_fail = 0;
     int rc, sock, optcount;
     long rcl;
     tlsa_rdata *tlsa_rdata_list = NULL;
@@ -199,7 +215,7 @@ int main(int argc, char **argv)
 
     if ( (rc = getaddrinfo(hostname, port, &gai_hints, &gai_result)) != 0) {
         fprintf(stderr, "getaddrinfo: %s: %s\n", hostname, gai_strerror(rc));
-        return 1;
+        goto cleanup;
     }
 
     /*
@@ -300,12 +316,14 @@ int main(int argc, char **argv)
         sock = socket(gaip->ai_family, gaip->ai_socktype, 0);
         if (sock == -1) {
             perror("socket");
+	    count_fail++;
             continue;
         }
 
         if (connect(sock, gaip->ai_addr, gaip->ai_addrlen) == -1) {
             perror("connect");
             close(sock);
+	    count_fail++;
             continue;
         }
 
@@ -314,6 +332,7 @@ int main(int argc, char **argv)
 	    fprintf(stderr, "SSL_new() failed.\n");
 	    ERR_print_errors_fp(stderr);
 	    close(sock);
+	    count_fail++;
 	    continue;
 	}
 
@@ -322,6 +341,7 @@ int main(int argc, char **argv)
 	    ERR_print_errors_fp(stderr);
 	    SSL_free(ssl);
 	    close(sock);
+	    count_fail++;
 	    continue;
 	}
 
@@ -348,6 +368,7 @@ int main(int argc, char **argv)
 		ERR_print_errors_fp(stderr);
 		SSL_free(ssl);
 		close(sock);
+		count_fail++;
 		continue;
 	    }
 	}
@@ -358,6 +379,7 @@ int main(int argc, char **argv)
 	    /* shutdown sbio here cleanly */
 	    SSL_free(ssl);
 	    close(sock);
+	    count_fail++;
 	    continue;
 	}
 
@@ -367,6 +389,7 @@ int main(int argc, char **argv)
 	    ERR_print_errors_fp(stderr);
 	    SSL_free(ssl);
 	    close(sock);
+	    count_fail++;
 	    continue;
 	}
 
@@ -381,7 +404,7 @@ int main(int argc, char **argv)
 
 	/* Report results of DANE or PKIX authentication of peer cert */
 	if ((rcl = SSL_get_verify_result(ssl)) == X509_V_OK) {
-	    return_status = 0;
+	    count_success++;
 	    const unsigned char *certdata;
 	    size_t certdata_len;
 	    const char *peername = SSL_get0_peername(ssl);
@@ -404,6 +427,7 @@ int main(int argc, char **argv)
 	    }
 	} else {
 	    /* Authentication failed */
+	    count_fail++;
 	    fprintf(stderr, "Error: peer authentication failed. rc=%ld (%s)\n",
                     rcl, X509_verify_cert_error_string(rcl));
 	    ERR_print_errors_fp(stderr);
@@ -426,6 +450,17 @@ cleanup:
 	SSL_CTX_free(ctx);
     }
 
-    /* Returns 0 if at least one SSL peer authenticates */
-    return return_status;
+    /*
+     * Return status:
+     * 0: Authentication success for all queried peers
+     * 1: Authentication success for some but not all queried peers
+     * 2: Authentication failed.
+     * 3: Program usage error.
+     */
+    if (count_success > 0 && count_fail == 0)
+	return 0;
+    else if (count_success > 0 && count_fail != 0)
+	return 1;
+    else
+	return 2;
 }
