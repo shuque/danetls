@@ -134,6 +134,11 @@ void print_cert_chain(SSL *ssl)
     STACK_OF(X509) *chain = SSL_get_peer_cert_chain(ssl);
     STACK_OF(GENERAL_NAME) *subjectaltnames = NULL;
 
+    if (chain == NULL) {
+	fprintf(stdout, "No Peer Certificate.");
+	return;
+    }
+
     fprintf(stdout, "Certificate chain:\n");
     for (i = 0; i < sk_X509_num(chain); i++) {
 	X509_NAME_get_text_by_NID(X509_get_subject_name(sk_X509_value(chain, i)),
@@ -144,8 +149,7 @@ void print_cert_chain(SSL *ssl)
 	fprintf(stdout, "   Issuer : %s\n", buffer);
     }
 
-    subjectaltnames = X509_get_ext_d2i(
-                                       (X509 *) sk_X509_value(chain, 0),
+    subjectaltnames = X509_get_ext_d2i(sk_X509_value(chain, 0),
                                        NID_subject_alt_name, NULL, NULL);
     if (subjectaltnames) {
         int san_count = sk_GENERAL_NAME_num(subjectaltnames);
