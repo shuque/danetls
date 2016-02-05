@@ -215,7 +215,7 @@ int main(int argc, char **argv)
 	}
     }
 
-    if (debug && tlsa_rdata_list != NULL) {
+    if (debug && auth_mode != MODE_PKIX && tlsa_rdata_list != NULL) {
 	fprintf(stdout, "TLSA records found: %ld\n", tlsa_count);
 	tlsa_rdata *rp;
 	for (rp = tlsa_rdata_list; rp != NULL; rp = rp->next) {
@@ -316,7 +316,8 @@ int main(int argc, char **argv)
 	    continue;
 	}
 
-	if (tlsa_rdata_list && SSL_dane_enable(ssl, hostname) <= 0) {
+	if (auth_mode != MODE_PKIX 
+	    && tlsa_rdata_list && SSL_dane_enable(ssl, hostname) <= 0) {
 	    fprintf(stderr, "SSL_dane_enable() failed.\n");
 	    ERR_print_errors_fp(stderr);
 	    SSL_free(ssl);
@@ -339,17 +340,19 @@ int main(int argc, char **argv)
 	(void) SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
 
 	/* Add TLSA record set rdata to TLS connection context */
-	tlsa_rdata *rp;
-	for (rp = tlsa_rdata_list; rp != NULL; rp = rp->next) {
-	    rc = SSL_dane_tlsa_add(ssl, rp->usage, rp->selector, rp->mtype, 
-				   rp->data, rp->data_len);
-	    if (rc < 0) {
-		printf("SSL_dane_tlsa_add() failed.\n");
-		ERR_print_errors_fp(stderr);
-		SSL_free(ssl);
-		close(sock);
-		count_fail++;
-		continue;
+	if (auth_mode != MODE_PKIX) {
+	    tlsa_rdata *rp;
+	    for (rp = tlsa_rdata_list; rp != NULL; rp = rp->next) {
+		rc = SSL_dane_tlsa_add(ssl, rp->usage, rp->selector, rp->mtype, 
+				       rp->data, rp->data_len);
+		if (rc < 0) {
+		    printf("SSL_dane_tlsa_add() failed.\n");
+		    ERR_print_errors_fp(stderr);
+		    SSL_free(ssl);
+		    close(sock);
+		    count_fail++;
+		    continue;
+		}
 	    }
 	}
 
