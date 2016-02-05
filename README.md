@@ -91,20 +91,24 @@ Connecting to IPv6 address: 2600:3c03:e000:81::a port 443
 TLSv1.2 handshake succeeded.
 Cipher: TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384
 Certificate chain:
- 0 Subject: /C=US/CN=www.huque.com/emailAddress=postmaster@huque.com
-   Issuer : /C=IL/O=StartCom Ltd./OU=Secure Digital Certificate Signing/CN=StartCom Class 1 Primary Intermediate Server CA
- 1 Subject: /C=IL/O=StartCom Ltd./OU=Secure Digital Certificate Signing/CN=StartCom Class 1 Primary Intermediate Server CA
-   Issuer : /C=IL/O=StartCom Ltd./OU=Secure Digital Certificate Signing/CN=StartCom Certification Authority
+ 0 Subject: www.huque.com
+   Issuer : StartCom Class 1 Primary Intermediate Server CA
+ 1 Subject: StartCom Class 1 Primary Intermediate Server CA
+   Issuer : StartCom Certification Authority
+ SAN dNSName: www.huque.com
+ SAN dNSName: huque.com
 DANE TLSA 3 1 1 [b760c12119c3...] matched EE certificate at depth 0
 
 Connecting to IPv4 address: 50.116.63.23 port 443
 TLSv1.2 handshake succeeded.
 Cipher: TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384
 Certificate chain:
- 0 Subject: /C=US/CN=www.huque.com/emailAddress=postmaster@huque.com
-   Issuer : /C=IL/O=StartCom Ltd./OU=Secure Digital Certificate Signing/CN=StartCom Class 1 Primary Intermediate Server CA
- 1 Subject: /C=IL/O=StartCom Ltd./OU=Secure Digital Certificate Signing/CN=StartCom Class 1 Primary Intermediate Server CA
-   Issuer : /C=IL/O=StartCom Ltd./OU=Secure Digital Certificate Signing/CN=StartCom Certification Authority
+ 0 Subject: www.huque.com
+   Issuer : StartCom Class 1 Primary Intermediate Server CA
+ 1 Subject: StartCom Class 1 Primary Intermediate Server CA
+   Issuer : StartCom Certification Authority
+ SAN dNSName: www.huque.com
+ SAN dNSName: huque.com
 DANE TLSA 3 1 1 [b760c12119c3...] matched EE certificate at depth 0
 ```
 
@@ -173,14 +177,17 @@ recv: 220 2.0.0 Ready to start TLS
 TLSv1.2 handshake succeeded.
 Cipher: TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384
 Certificate chain:
- 0 Subject: /OU=Domain Control Validated/CN=*.ietf.org
-   Issuer : /C=US/ST=Arizona/L=Scottsdale/O=Starfield Technologies, Inc./OU=http://certs.starfieldtech.com/repository//CN=Starfield Secure Certificate Authority - G2
- 1 Subject: /C=US/ST=Arizona/L=Scottsdale/O=Starfield Technologies, Inc./OU=http://certs.starfieldtech.com/repository//CN=Starfield Secure Certificate Authority - G2
-   Issuer : /C=US/ST=Arizona/L=Scottsdale/O=Starfield Technologies, Inc./CN=Starfield Root Certificate Authority - G2
- 2 Subject: /C=US/ST=Arizona/L=Scottsdale/O=Starfield Technologies, Inc./CN=Starfield Root Certificate Authority - G2
-   Issuer : /C=US/O=Starfield Technologies, Inc./OU=Starfield Class 2 Certification Authority
- 3 Subject: /C=US/O=Starfield Technologies, Inc./OU=Starfield Class 2 Certification Authority
-   Issuer : /C=US/O=Starfield Technologies, Inc./OU=Starfield Class 2 Certification Authority
+ 0 Subject: *.ietf.org
+   Issuer : Starfield Secure Certificate Authority - G2
+ 1 Subject: Starfield Secure Certificate Authority - G2
+   Issuer : Starfield Root Certificate Authority - G2
+ 2 Subject: Starfield Root Certificate Authority - G2
+   Issuer : Starfield Root Certificate Authority - G2
+ 3 Subject: Starfield Root Certificate Authority - G2
+   Issuer : Starfield Root Certificate Authority - G2
+ SAN dNSName: *.ietf.org
+ SAN dNSName: ietf.org
+ SAN dNSName: *.ietf.org
 DANE TLSA 3 1 1 [0c72ac70b745...] matched EE certificate at depth 0
 
 Connecting to IPv4 address: 4.31.198.44 port 25
@@ -200,14 +207,17 @@ recv: 220 2.0.0 Ready to start TLS
 TLSv1.2 handshake succeeded.
 Cipher: TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384
 Certificate chain:
- 0 Subject: /OU=Domain Control Validated/CN=*.ietf.org
-   Issuer : /C=US/ST=Arizona/L=Scottsdale/O=Starfield Technologies, Inc./OU=http://certs.starfieldtech.com/repository//CN=Starfield Secure Certificate Authority - G2
- 1 Subject: /C=US/ST=Arizona/L=Scottsdale/O=Starfield Technologies, Inc./OU=http://certs.starfieldtech.com/repository//CN=Starfield Secure Certificate Authority - G2
-   Issuer : /C=US/ST=Arizona/L=Scottsdale/O=Starfield Technologies, Inc./CN=Starfield Root Certificate Authority - G2
- 2 Subject: /C=US/ST=Arizona/L=Scottsdale/O=Starfield Technologies, Inc./CN=Starfield Root Certificate Authority - G2
-   Issuer : /C=US/O=Starfield Technologies, Inc./OU=Starfield Class 2 Certification Authority
- 3 Subject: /C=US/O=Starfield Technologies, Inc./OU=Starfield Class 2 Certification Authority
-   Issuer : /C=US/O=Starfield Technologies, Inc./OU=Starfield Class 2 Certification Authority
+ 0 Subject: *.ietf.org
+   Issuer : Starfield Secure Certificate Authority - G2
+ 1 Subject: Starfield Secure Certificate Authority - G2
+   Issuer : Starfield Root Certificate Authority - G2
+ 2 Subject: Starfield Root Certificate Authority - G2
+   Issuer : Starfield Root Certificate Authority - G2
+ 3 Subject: Starfield Root Certificate Authority - G2
+   Issuer : Starfield Root Certificate Authority - G2
+ SAN dNSName: *.ietf.org
+ SAN dNSName: ietf.org
+ SAN dNSName: *.ietf.org
 DANE TLSA 3 1 1 [0c72ac70b745...] matched EE certificate at depth 0
 ```
 
@@ -220,22 +230,24 @@ TLSA: 3 1 1 4758af6f02dfb5dc8795fa402e77a8a0486af5e85d2ca60c294476aadc40b220
 
 Connecting to IPv4 address: 80.241.60.206 port 5269
 send: <?xml version='1.0'?><stream:stream to='mailbox.org' version='1.0' xml:lang='en' xmlns='jabber:server' xmlns:stream='http://etherx.jabber.org/streams'>
-recv: <?xml version='1.0'?><stream:stream xmlns:db='jabber:server:dialback' xmlns:stream='http://etherx.jabber.org/streams' version='1.0' from='mailbox.org' id='113d3aef-7495-4d5b-a030-09885afe3046' to='' xml:lang='en' xmlns='jabber:server'><stream:features><dialback xmlns='urn:xmpp:features:dialback'/><starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'><required/></starttls></stream:features>
+recv: <?xml version='1.0'?><stream:stream xmlns:db='jabber:server:dialback' xmlns:stream='http://etherx.jabber.org/streams' version='1.0' from='mailbox.org' id='4238a37a-919a-41e3-a8e4-0f0c9ce9a8af' to='' xml:lang='en' xmlns='jabber:server'><stream:features><dialback xmlns='urn:xmpp:features:dialback'/><starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'><required/></starttls></stream:features>
 send: <starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>
 recv: <proceed xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>
 TLSv1.2 handshake succeeded.
 Cipher: TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384
 Certificate chain:
- 0 Subject: /OU=Domain Validated Only/CN=*.mailbox.org
-   Issuer : /C=CH/O=SwissSign AG/CN=SwissSign Server Silver CA 2014 - G22
- 1 Subject: /C=CH/O=SwissSign AG/CN=SwissSign Server Silver CA 2014 - G22
-   Issuer : /C=CH/O=SwissSign AG/CN=SwissSign Silver CA - G2
- 2 Subject: /C=CH/O=SwissSign AG/CN=SwissSign Silver CA - G2
-   Issuer : /C=CH/O=SwissSign AG/CN=SwissSign Silver CA - G2
+ 0 Subject: *.mailbox.org
+   Issuer : SwissSign Server Silver CA 2014 - G22
+ 1 Subject: SwissSign Server Silver CA 2014 - G22
+   Issuer : SwissSign Silver CA - G2
+ 2 Subject: SwissSign Silver CA - G2
+   Issuer : SwissSign Silver CA - G2
+ SAN dNSName: *.mailbox.org
+ SAN dNSName: mailbox.org
 DANE TLSA 3 1 1 [4758af6f02df...] matched EE certificate at depth 0
 ```
 
-### Other modes
+### Other examples
 
 TBD ...
 
