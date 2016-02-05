@@ -26,10 +26,12 @@
     #include <event.h>
 #endif
 
+#include "common.h"
 #include "query-getdns.h"
 
 extern int debug;
 extern int recursion;
+extern enum AUTH_MODE auth_mode;
 
 /*
  * addresses: (head of) linked list of addrinfo structures
@@ -48,7 +50,7 @@ insert_addrinfo(struct addrinfo *current, struct addrinfo *new)
 }
 
 struct addrinfo *make_addrinfo(getdns_dict *address, 
-			       char *hostname, uint16_t port)
+			       const char *hostname, uint16_t port)
 {
     getdns_return_t rc;
     getdns_bindata *addr_type, *addr_data;
@@ -143,7 +145,7 @@ void cb_address(getdns_context *ctx,
     getdns_return_t rc;
     uint32_t status;
     qinfo *qip = (qinfo *) userarg;
-    char *hostname = qip->qname;
+    const char *hostname = qip->qname;
     uint16_t port = qip->port;
     getdns_list    *just_addresses;
     size_t         cnt_addr;
@@ -167,7 +169,7 @@ void cb_address(getdns_context *ctx,
 	goto cleanup;
     }
 
-    if (status != 900) {
+    if (status != GETDNS_RESPSTATUS_GOOD) {
 	fprintf(stderr, "FAIL: %s: %s\n",
 		hostname, getdns_get_errorstr_by_id(status));
 	goto cleanup;
@@ -230,7 +232,7 @@ void cb_tlsa(getdns_context *ctx,
     getdns_return_t rc;
     uint32_t status;
     qinfo *qip = (qinfo *) userarg;
-    char *hostname = qip->qname;
+    const char *hostname = qip->qname;
     getdns_list    *replies_tree, *answer;
     size_t         i, j, num_replies, num_answers;
     getdns_dict    *reply;
@@ -242,36 +244,42 @@ void cb_tlsa(getdns_context *ctx,
     case GETDNS_CALLBACK_TIMEOUT:
     case GETDNS_CALLBACK_ERROR:
     default:
-        fprintf(stderr, "Callback address fail: %s, tid=%"PRIu64" rc=%d\n",
+        fprintf(stderr, "Callback address fail: %s/TLSA, tid=%"PRIu64" rc=%d\n",
                 hostname, tid, cb_type);
 	return;
     }
 
     if ((rc = getdns_dict_get_int(response, "status", &status))) {
-	fprintf(stderr, "FAIL: %s: Error obtaining status code: %s\n", 
+	fprintf(stderr, "FAIL: %s/TLSA: Error obtaining status code: %s\n", 
 		hostname, getdns_get_errorstr_by_id(rc));
 	goto cleanup;
     }
 
-    if (status != 900) {
-	if (debug)
-	    fprintf(stderr, "FAIL: %s: %s\n",
-		    hostname, getdns_get_errorstr_by_id(status));
+    if (status != GETDNS_RESPSTATUS_GOOD) {
+	if (debug) 
+	    switch (status) {
+	    case GETDNS_RESPSTATUS_NO_SECURE_ANSWERS:
+		fprintf(stderr, "FAIL: %s/TLSA: No secure answers found.\n", 
+			hostname);
+		break;
+	    case GETDNS_RESPSTATUS_ALL_BOGUS_ANSWERS:
+		fprintf(stderr, "FAIL: %s/TLSA: No secure answers found (all bogus).\n", hostname);
+		break;
+	    default:
+		fprintf(stderr, "FAIL: %s/TLSA: %s\n",
+			hostname, getdns_get_errorstr_by_id(status));
+	    }
 	goto cleanup;
     }
 
     if ((rc = getdns_dict_get_list(response, "replies_tree", 
 				   &replies_tree))) {
-	fprintf(stderr, "FAIL: getting replies from responsedict: %s\n",
-		getdns_get_errorstr_by_id(rc));
+	fprintf(stderr, "FAIL %s/TLSA: getting replies from responsedict: %s\n",
+		hostname, getdns_get_errorstr_by_id(rc));
 	goto cleanup;
     }
 
-    if ((rc = getdns_list_get_length(replies_tree, &num_replies))) {
-	fprintf(stderr, "FAIL: getting replies_tree length: %s\n", 
-		getdns_get_errorstr_by_id(rc));
-	goto cleanup;
-    }
+    (void) getdns_list_get_length(replies_tree, &num_replies);
 
     if (num_replies <= 0) {
 	printf("FAIL: %s: No TLSA records found.\n", hostname);
@@ -283,20 +291,17 @@ void cb_tlsa(getdns_context *ctx,
     for (i = 0; i < num_replies; i++) {
 	
 	if ((rc = getdns_list_get_dict(replies_tree, i, &reply))) {
-	    fprintf(stderr, "FAIL: %s: TLSA getting reply: %s\n",
+	    fprintf(stderr, "FAIL: %s/TLSA: getting reply: %s\n",
 		    hostname, getdns_get_errorstr_by_id(rc));
 	    break;
 	}
 	if ((rc = getdns_dict_get_list(reply, "answer", &answer))) {
-	    fprintf(stderr, "FAIL: %s: TLSA getting answer sec: %s\n",
+	    fprintf(stderr, "FAIL: %s/TLSA: getting answer section: %s\n",
 		    hostname, getdns_get_errorstr_by_id(rc));
 	    break;
 	}
-	if ((rc = getdns_list_get_length(answer, &num_answers))) {
-	    fprintf(stderr, "FAIL: %s: TLSA getting answer length: %s\n",
-		    hostname, getdns_get_errorstr_by_id(rc));
-	    break;
-	}
+
+	(void) getdns_list_get_length(answer, &num_answers);
 
 	for (j=0; j < num_answers; j++) {
 
@@ -305,13 +310,13 @@ void cb_tlsa(getdns_context *ctx,
 	    getdns_bindata *certdata = NULL;
 
 	    if ((rc = getdns_list_get_dict(answer, j, &rr))) {
-		fprintf(stderr, "FAIL: %s: TLSA getting rr %zu: %s\n",
+		fprintf(stderr, "FAIL: %s/TLSA: getting rr %zu: %s\n",
 			hostname, j, getdns_get_errorstr_by_id(rc));
 		break;
 	    }
 
 	    if ((rc = getdns_dict_get_int(rr, "/type", &rrtype))) {
-		fprintf(stderr, "FAIL: %s: TLSA getting rrtype: %s\n",
+		fprintf(stderr, "FAIL: %s/TLSA: getting rrtype: %s\n",
 			hostname, getdns_get_errorstr_by_id(rc));
 		break;
 	    }
@@ -320,26 +325,26 @@ void cb_tlsa(getdns_context *ctx,
 	    
 	    if ((rc = getdns_dict_get_int(rr, "/rdata/certificate_usage", 
 					  &usage))) {
-		fprintf(stderr, "FAIL: %s: TLSA getting usage: %s\n",
+		fprintf(stderr, "FAIL: %s/TLSA: getting usage: %s\n",
 			hostname, getdns_get_errorstr_by_id(rc));
 		break;
 	    }
 	    if ((rc = getdns_dict_get_int(rr, "/rdata/selector", 
 					  &selector))) {
-		fprintf(stderr, "FAIL: %s: TLSA getting selector: %s\n",
+		fprintf(stderr, "FAIL: %s/TLSA: getting selector: %s\n",
 			hostname, getdns_get_errorstr_by_id(rc));
 		break;
 	    }
 	    if ((rc = getdns_dict_get_int(rr, "/rdata/matching_type", 
 					  &mtype))) {
-		fprintf(stderr, "FAIL: %s: TLSA getting mtype: %s\n",
+		fprintf(stderr, "FAIL: %s/TLSA: getting mtype: %s\n",
 			hostname, getdns_get_errorstr_by_id(rc));
 		break;
 	    }
 	    if ((rc = getdns_dict_get_bindata(rr, 
 					      "/rdata/certificate_association_data", 
 					      &certdata))) {
-		fprintf(stderr, "FAIL: %s: TLSA getting certdata: %s\n",
+		fprintf(stderr, "FAIL: %s/TLSA: getting certdata: %s\n",
 			hostname, getdns_get_errorstr_by_id(rc));
 		break;
 	    }
@@ -371,7 +376,7 @@ cleanup:
  * populate address and TLSA set data structures.
  */
 
-int do_dns_queries(char *hostname, char *port)
+int do_dns_queries(const char *hostname, const char *port)
 {
 
     char domainstring[512];
@@ -434,19 +439,21 @@ int do_dns_queries(char *hostname, char *port)
     /*
      * TLSA record lookup
      */
-    snprintf(domainstring, 512, "_%s._tcp.%s", port, hostname);
-    qip = (qinfo *) malloc(sizeof(qinfo));
-    qip->qname = domainstring;
-    qip->qtype = GETDNS_RRTYPE_TLSA;
-    qip->port = port_int;
-    rc = getdns_general(context, domainstring, GETDNS_RRTYPE_TLSA, extensions, 
-			(void *) qip, &tid, cb_tlsa);
-    if (rc != GETDNS_RETURN_GOOD) {
-	fprintf(stderr, "ERROR: %s getdns_general TLSA failed: %s\n", 
-		domainstring, getdns_get_errorstr_by_id(rc));
-	event_base_free(evb);
-	getdns_context_destroy(context);
-	return 0;
+    if (auth_mode != MODE_PKIX) {
+	snprintf(domainstring, 512, "_%s._tcp.%s", port, hostname);
+	qip = (qinfo *) malloc(sizeof(qinfo));
+	qip->qname = domainstring;
+	qip->qtype = GETDNS_RRTYPE_TLSA;
+	qip->port = port_int;
+	rc = getdns_general(context, domainstring, GETDNS_RRTYPE_TLSA, extensions, 
+			    (void *) qip, &tid, cb_tlsa);
+	if (rc != GETDNS_RETURN_GOOD) {
+	    fprintf(stderr, "ERROR: %s getdns_general TLSA failed: %s\n", 
+		    domainstring, getdns_get_errorstr_by_id(rc));
+	    event_base_free(evb);
+	    getdns_context_destroy(context);
+	    return 0;
+	}
     }
 
     int e_rc = event_base_dispatch(evb);

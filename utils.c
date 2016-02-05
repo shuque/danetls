@@ -22,3 +22,12 @@ char *bin2hexstring(uint8_t *data, size_t length)
     return outstring;
 }
 
+/*
+ * bindata2hexstring(): convert a getdns bindata input into a string of
+ * hex digits.
+ */
+
+char *bindata2hexstring(getdns_bindata *b)
+{
+    return bin2hexstring(b->data, b->size);
+}

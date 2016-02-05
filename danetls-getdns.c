@@ -24,19 +24,15 @@
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
 
+#include "common.h"
 #include "utils.h"
 #include "query-getdns.h"
 #include "starttls.h"
 
-/*
- * Enumerated Types and Global variables
- */
 
-enum AUTH_MODE { 
-    MODE_BOTH=0, 
-    MODE_DANE, 
-    MODE_PKIX 
-};
+/*
+ * Global variables
+ */
 
 int debug = 0;
 int recursion = 0;
@@ -215,7 +211,7 @@ int main(int argc, char **argv)
 	}
     }
 
-    if (debug && auth_mode != MODE_PKIX && tlsa_rdata_list != NULL) {
+    if (debug && tlsa_rdata_list != NULL) {
 	fprintf(stdout, "TLSA records found: %ld\n", tlsa_count);
 	tlsa_rdata *rp;
 	for (rp = tlsa_rdata_list; rp != NULL; rp = rp->next) {
@@ -316,8 +312,7 @@ int main(int argc, char **argv)
 	    continue;
 	}
 
-	if (auth_mode != MODE_PKIX 
-	    && tlsa_rdata_list && SSL_dane_enable(ssl, hostname) <= 0) {
+	if (tlsa_rdata_list && SSL_dane_enable(ssl, hostname) <= 0) {
 	    fprintf(stderr, "SSL_dane_enable() failed.\n");
 	    ERR_print_errors_fp(stderr);
 	    SSL_free(ssl);
@@ -340,19 +335,17 @@ int main(int argc, char **argv)
 	(void) SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
 
 	/* Add TLSA record set rdata to TLS connection context */
-	if (auth_mode != MODE_PKIX) {
-	    tlsa_rdata *rp;
-	    for (rp = tlsa_rdata_list; rp != NULL; rp = rp->next) {
-		rc = SSL_dane_tlsa_add(ssl, rp->usage, rp->selector, rp->mtype, 
-				       rp->data, rp->data_len);
-		if (rc < 0) {
-		    printf("SSL_dane_tlsa_add() failed.\n");
-		    ERR_print_errors_fp(stderr);
-		    SSL_free(ssl);
-		    close(sock);
-		    count_fail++;
-		    continue;
-		}
+	tlsa_rdata *rp;
+	for (rp = tlsa_rdata_list; rp != NULL; rp = rp->next) {
+	    rc = SSL_dane_tlsa_add(ssl, rp->usage, rp->selector, rp->mtype, 
+				   rp->data, rp->data_len);
+	    if (rc < 0) {
+		printf("SSL_dane_tlsa_add() failed.\n");
+		ERR_print_errors_fp(stderr);
+		SSL_free(ssl);
+		close(sock);
+		count_fail++;
+		continue;
 	    }
 	}
 

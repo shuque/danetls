@@ -37,19 +37,14 @@
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
 
+#include "common.h"
 #include "utils.h"
 #include "query-ldns.h"
 #include "starttls.h"
 
 /*
- * Enumerated Types and Global variables
+ * Global variables
  */
-
-enum AUTH_MODE { 
-    MODE_BOTH=0, 
-    MODE_DANE, 
-    MODE_PKIX 
-};
 
 int debug = 0;
 enum AUTH_MODE auth_mode = MODE_BOTH;
