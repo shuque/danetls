@@ -165,14 +165,13 @@ int main(int argc, char **argv)
     char ipstring[INET6_ADDRSTRLEN], *cp;
     struct sockaddr_in *sa4;
     struct sockaddr_in6 *sa6;
-    int count_success = 0, count_fail = 0;
+    int count_success = 0, count_fail = 0, count_tlsa_usable=0;
     int rc, sock, optcount;
     long rcl;
 
     SSL_CTX *ctx = NULL;
     SSL *ssl = NULL;
     const SSL_CIPHER *cipher = NULL;
-    X509_VERIFY_PARAM *vpm = NULL;
     BIO *sbio;
 
     uint8_t usage, selector, mtype;
@@ -248,16 +247,6 @@ int main(int argc, char **argv)
 	}
     }
 
-    vpm = X509_VERIFY_PARAM_new();
-    if (X509_VERIFY_PARAM_set1_host(vpm, hostname, 0) != 1) {
-	fprintf(stderr, "Unable to set verify hostname parameter.\n");
-	goto cleanup;
-    }
-    if (SSL_CTX_set1_param(ctx, vpm) != 1) {
-	fprintf(stderr, "Unable to set context verify parameters.\n");
-	goto cleanup;
-    }
-
     SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
     SSL_CTX_set_verify_depth(ctx, 10);
 
@@ -312,7 +301,16 @@ int main(int argc, char **argv)
 	    continue;
 	}
 
-	if (tlsa_rdata_list && SSL_dane_enable(ssl, hostname) <= 0) {
+	if (!tlsa_rdata_list) {
+            if (SSL_set1_host(ssl, hostname) != 1) {
+		fprintf(stderr, "SSL_set1_host() failed.\n");
+		ERR_print_errors_fp(stderr);
+                SSL_free(ssl);
+                close(sock);
+                count_fail++;
+                continue;
+            }
+	} else if (SSL_dane_enable(ssl, hostname) <= 0) {
 	    fprintf(stderr, "SSL_dane_enable() failed.\n");
 	    ERR_print_errors_fp(stderr);
 	    SSL_free(ssl);
@@ -346,8 +344,22 @@ int main(int argc, char **argv)
 		close(sock);
 		count_fail++;
 		continue;
-	    }
+	    } else if (rc == 0) {
+		cp = bin2hexstring((uint8_t *) rp->data, rp->data_len);
+                fprintf(stderr, "WARNING: Unusable TLSA record: %d %d %d %s\n",
+                        rp->usage, rp->selector, rp->mtype, cp);
+		free(cp);
+            } else
+                count_tlsa_usable++;
 	}
+
+        if (auth_mode == MODE_DANE && count_tlsa_usable == 0) {
+            fprintf(stderr, "No usable TLSA records present.\n");
+            SSL_free(ssl);
+            close(sock);
+            count_fail++;
+            continue;
+        }
 
 	/* Do application specific STARTTLS conversation if requested */
 	if (starttls != STARTTLS_NONE && !do_starttls(starttls, sbio, service_name, hostname)) {
@@ -420,10 +432,8 @@ int main(int argc, char **argv)
 
 cleanup:
     free_tlsa(tlsa_rdata_list);
-    if (ctx) {
-	X509_VERIFY_PARAM_free(vpm);
+    if (ctx)
 	SSL_CTX_free(ctx);
-    }
 
     /*
      * Return status:
