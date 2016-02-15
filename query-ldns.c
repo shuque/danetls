@@ -82,9 +82,26 @@ tlsa_rdata *get_tlsa(const char *hostname, const char *port)
 				 LDNS_RR_TYPE_TLSA,
 				 LDNS_RR_CLASS_IN,
 				 LDNS_RD | LDNS_AD);
+    ldns_rdf_deep_free(tlsa_owner);
+
     if (ldns_p == (ldns_pkt *) NULL) {
 	fprintf(stderr, "ldns_resolver_query() failed.\n");
+        ldns_resolver_deep_free(resolver);
         return NULL;
+    }
+
+    tlsa_response_rcode = ldns_pkt_get_rcode(ldns_p);
+    if (tlsa_response_rcode == LDNS_RCODE_SERVFAIL) {
+        ldns_pkt_free(ldns_p);
+        ldns_resolver_deep_free(resolver);
+        return NULL;
+    }
+
+    if (! ldns_pkt_ad(ldns_p)) {
+	fprintf(stderr, "Unauthenticated response for TLSA record set.\n");
+        ldns_pkt_free(ldns_p);
+        ldns_resolver_deep_free(resolver);
+	return NULL;
     }
 
     tlsa_rr_list = ldns_pkt_rr_list_by_type(ldns_p,
@@ -92,11 +109,8 @@ tlsa_rdata *get_tlsa(const char *hostname, const char *port)
 					    LDNS_SECTION_ANSWER);
 
     if (tlsa_rr_list == NULL) {
-	return NULL;
-    }
-
-    if (! ldns_pkt_ad(ldns_p)) {
-	fprintf(stderr, "Unauthenticated response for TLSA record.\n");
+        ldns_pkt_free(ldns_p);
+        ldns_resolver_deep_free(resolver);
 	return NULL;
     }
 

@@ -16,6 +16,7 @@
  */
 
 size_t tlsa_count;
+ldns_pkt_rcode tlsa_response_rcode;
 
 typedef struct tlsa_rdata {
     uint8_t usage;
