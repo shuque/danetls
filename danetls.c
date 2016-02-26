@@ -2,10 +2,9 @@
  * Program to test new OpenSSL DANE verification code (2016-01).
  * Requires OpenSSL 1.1.0-pre2 or later.
  *
- * Uses getaddrinfo() to query address records.
- * Uses libldns to query TLSA records, assuming trusted path to validating
- * resolver that returns AD bit for authenticated results, when we query
- * with AD=1.
+ * Uses ldns to query address & TLSA records, assuming trusted path to a
+ * validating resolver that returns AD bit for authenticated results, when 
+ * we query with AD=1.
  * Connects to given host and port, establishes TLS session, and 
  * attempts to authenticate peer with DANE first, and lacking TLSA
  * records, failing back to normal PKIX authentication.
@@ -120,6 +119,9 @@ int parse_options(const char *progname, int argc, char **argv)
 
 /*
  * print_cert_chain()
+ * Note: this prints the certificate chain presented by the server
+ * in its Certificate handshake message, not the certificate chain
+ * that was used to validate the server.
  */
 
 void print_cert_chain(SSL *ssl)
@@ -170,14 +172,16 @@ int main(int argc, char **argv)
 {
 
     const char *progname, *hostname, *port;
-    struct addrinfo gai_hints;
-    struct addrinfo *gai_result = NULL, *gaip;
+    ldns_resolver *resolver;
+    struct addrinfo *gaip = NULL;
     char ipstring[INET6_ADDRSTRLEN], *cp;
     struct sockaddr_in *sa4;
     struct sockaddr_in6 *sa6;
     int count_success = 0, count_fail = 0, count_tlsa_usable=0;
     int rc, sock, optcount;
     long rcl;
+    int attempt_dane = 0;
+    struct addrinfo *addresses = NULL;
     tlsa_rdata *tlsa_rdata_list = NULL;
 
     SSL_CTX *ctx = NULL;
@@ -202,43 +206,56 @@ int main(int argc, char **argv)
     port = argv[1];
 
     /*
-     * Obtain address records with getaddrinfo()
+     * DNS Queries:
+     * Obtain address records (AAAA and A) and populate "addresses",
+     * a linked list of addrinfo structures.
+     * Query DNS TLSA record set and store results in "tlsa_rdata_list",
+     * a linked list of structures holding TLSA rdata sets.
      */
 
-    memset(&gai_hints, 0, sizeof(struct addrinfo));
-    gai_hints.ai_family = AF_UNSPEC;
-    gai_hints.ai_socktype = SOCK_STREAM;
-    gai_hints.ai_flags = 0;
-    gai_hints.ai_protocol = 0;
+    resolver = get_resolver();
+    addresses = get_addresses(resolver, hostname, port);
 
-    if ( (rc = getaddrinfo(hostname, port, &gai_hints, &gai_result)) != 0) {
-        fprintf(stderr, "getaddrinfo: %s: %s\n", hostname, gai_strerror(rc));
-        goto cleanup;
+    if (auth_mode != MODE_PKIX)
+	tlsa_rdata_list = get_tlsa(resolver, hostname, port);
+
+    ldns_resolver_deep_free(resolver);
+
+    /*
+     * Bail out if responses are bogus or indeterminate
+     */
+
+    if (dns_bogus_or_indeterminate)
+	goto cleanup;
+
+    /*
+     * Set flag to attempt DANE ("attempt_dane") only if TLSA
+     * records were found and both address and TLSA record set
+     * were successfully authenticated with DNSSEC.
+     */
+
+    if (auth_mode == MODE_DANE || auth_mode == MODE_BOTH) {
+	if (tlsa_rdata_list == NULL) {
+	    if (auth_mode == MODE_DANE)
+		goto cleanup;
+	} else if (tlsa_authenticated == 0) {
+	    fprintf(stderr, "Insecure TLSA records.\n");
+	    if (auth_mode == MODE_DANE)
+		goto cleanup;
+	} else if (v4_authenticated == 0 || v6_authenticated == 0) {
+	    fprintf(stderr, "Insecure Address records.\n");
+	    if (auth_mode == MODE_DANE)
+		goto cleanup;
+	} else {
+	    attempt_dane = 1;
+	}
     }
 
     /*
-     * Query DNS TLSA record set and store results
+     * Print TLSA records if debug flag was provided.
      */
 
-    if (auth_mode != MODE_PKIX) {
-	tlsa_rdata_list = get_tlsa(hostname, port);
-	if (tlsa_response_rcode == LDNS_RCODE_SERVFAIL) {
-	    fprintf(stderr, "Error: SERVFAIL response to TLSA query.\n");
-	    goto cleanup;
-	}
-    }
-
-    if (tlsa_rdata_list == NULL) {
-	if (auth_mode == MODE_DANE) {
-	    fprintf(stderr, "No TLSA records; exiting.\n");
-	    goto cleanup;
-	} else if (auth_mode != MODE_PKIX) {
-	    fprintf(stderr, "No TLSA records found; " 
-		    "Performing PKIX-only validation.\n\n");
-	}
-    }
-
-    if (debug && tlsa_rdata_list != NULL) {
+    if (debug && attempt_dane) {
 	fprintf(stdout, "TLSA records found: %ld\n", tlsa_count);
 	tlsa_rdata *rp;
 	for (rp = tlsa_rdata_list; rp != NULL; rp = rp->next) {
@@ -251,7 +268,7 @@ int main(int argc, char **argv)
 
     /*
      * Initialize OpenSSL TLS library context, certificate authority
-     * stores, and hostname verification parameters.
+     * stores, and certificate verification parameters.
      */
 
     SSL_load_error_strings();
@@ -289,10 +306,10 @@ int main(int argc, char **argv)
 
     /*
      * Loop over all addresses from getaddrinfo(), connect to each,
-     * establish TLS connection, and perform DANE peer verification.
+     * establish TLS connection, and perform peer authentication.
      */
 
-    for (gaip = gai_result; gaip != NULL; gaip = gaip->ai_next) {
+    for (gaip = addresses; gaip != NULL; gaip = gaip->ai_next) {
 
         if (gaip->ai_family == AF_INET) {
             sa4 = (struct sockaddr_in *) gaip->ai_addr;
@@ -306,7 +323,7 @@ int main(int argc, char **argv)
                     ipstring, ntohs(sa6->sin6_port));
         }
 
-        sock = socket(gaip->ai_family, gaip->ai_socktype, 0);
+        sock = socket(gaip->ai_family, SOCK_STREAM, 0);
         if (sock == -1) {
             perror("socket");
 	    count_fail++;
@@ -329,7 +346,25 @@ int main(int argc, char **argv)
 	    continue;
 	}
 
-	if (!tlsa_rdata_list) {
+	/*
+	 * SSL_set1_host() for non-DANE, SSL_dane_enable() for DANE.
+	 * For DANE SSL_dane_enable() issues TLS SNI extension; for
+	 * non-DANE, we need to explicitly call SSL_set_tlsext_host_name().
+	 */
+
+	if (attempt_dane) {
+
+	    if (SSL_dane_enable(ssl, hostname) <= 0) {
+		fprintf(stderr, "SSL_dane_enable() failed.\n");
+		ERR_print_errors_fp(stderr);
+		SSL_free(ssl);
+		close(sock);
+		count_fail++;
+		continue;
+	    }
+
+	} else {
+
 	    if (SSL_set1_host(ssl, hostname) != 1) {
 		fprintf(stderr, "SSL_set1_host() failed.\n");
 		ERR_print_errors_fp(stderr);
@@ -338,21 +373,13 @@ int main(int argc, char **argv)
 		count_fail++;
 		continue;
 	    }
-	} else if (SSL_dane_enable(ssl, hostname) <= 0) {
-	    fprintf(stderr, "SSL_dane_enable() failed.\n");
-	    ERR_print_errors_fp(stderr);
-	    SSL_free(ssl);
-	    close(sock);
-	    count_fail++;
-	    continue;
+	    /* Set TLS Server Name Indication extension */
+	    (void) SSL_set_tlsext_host_name(ssl, hostname);
+
 	}
 
 	/* No partial label wildcards */
 	SSL_set_hostflags(ssl, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
-
-	/* Set TLS Server Name Indication extension */
-	(void) SSL_set_tlsext_host_name(ssl, 
-					(service_name? service_name : hostname));
 
 	/* Set connect mode (client) and tie socket to TLS context */
 	SSL_set_connect_state(ssl);
@@ -361,24 +388,26 @@ int main(int argc, char **argv)
 	(void) SSL_set_mode(ssl, SSL_MODE_AUTO_RETRY);
 
 	/* Add TLSA record set rdata to TLS connection context */
-	tlsa_rdata *rp;
-	for (rp = tlsa_rdata_list; rp != NULL; rp = rp->next) {
-	    rc = SSL_dane_tlsa_add(ssl, rp->usage, rp->selector, rp->mtype, 
-				   rp->data, rp->data_len);
-	    if (rc < 0) {
-		printf("SSL_dane_tlsa_add() failed.\n");
-		ERR_print_errors_fp(stderr);
-		SSL_free(ssl);
-		close(sock);
-		count_fail++;
-		continue;
-	    } else if (rc == 0) {
-		cp = bin2hexstring((uint8_t *) rp->data, rp->data_len);
-		fprintf(stderr, "WARNING: Unusable TLSA record: %d %d %d %s\n",
-			rp->usage, rp->selector, rp->mtype, cp);
-		free(cp);
-	    } else
-		count_tlsa_usable++;
+	if (attempt_dane) {
+	    tlsa_rdata *rp;
+	    for (rp = tlsa_rdata_list; rp != NULL; rp = rp->next) {
+		rc = SSL_dane_tlsa_add(ssl, rp->usage, rp->selector, rp->mtype, 
+				       rp->data, rp->data_len);
+		if (rc < 0) {
+		    printf("SSL_dane_tlsa_add() failed.\n");
+		    ERR_print_errors_fp(stderr);
+		    SSL_free(ssl);
+		    close(sock);
+		    count_fail++;
+		    continue;
+		} else if (rc == 0) {
+		    cp = bin2hexstring((uint8_t *) rp->data, rp->data_len);
+		    fprintf(stderr, "Unusable TLSA record: %d %d %d %s\n",
+			    rp->usage, rp->selector, rp->mtype, cp);
+		    free(cp);
+		} else
+		    count_tlsa_usable++;
+	    }
 	}
 
 	if (auth_mode == MODE_DANE && count_tlsa_usable == 0) {
@@ -459,7 +488,7 @@ int main(int argc, char **argv)
     }
 
 cleanup:
-    freeaddrinfo(gai_result);
+    freeaddrinfo(addresses);
     free_tlsa(tlsa_rdata_list);
     if (ctx)
 	SSL_CTX_free(ctx);
