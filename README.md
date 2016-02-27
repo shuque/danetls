@@ -83,41 +83,49 @@ DANE TLSA 3 1 1 [0c72ac70b745...] matched EE certificate at depth 0
 
 Checking HTTPS at www.huque.com with additional debugging (-d):
 ```
-$ danetls -d www.huque.com 443
 TLSA records found: 1
 TLSA: 3 1 1 b760c12119c388736da724df1224d21dfd23bf03366c286de1a4125369ef7de0
 
 Connecting to IPv6 address: 2600:3c03:e000:81::a port 443
 TLSv1.2 handshake succeeded.
 Cipher: TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384
-Certificate chain:
- 0 Subject: www.huque.com
-   Issuer : StartCom Class 1 Primary Intermediate Server CA
- 1 Subject: StartCom Class 1 Primary Intermediate Server CA
-   Issuer : StartCom Certification Authority
+Peer Certificate chain:
+ 0 Subject CN: www.huque.com
+   Issuer  CN: StartCom Class 1 Primary Intermediate Server CA
+ 1 Subject CN: StartCom Class 1 Primary Intermediate Server CA
+   Issuer  CN: StartCom Certification Authority
  SAN dNSName: www.huque.com
  SAN dNSName: huque.com
 DANE TLSA 3 1 1 [b760c12119c3...] matched EE certificate at depth 0
+Validated Certificate chain:
+ 0 Subject CN: www.huque.com
+   Issuer  CN: StartCom Class 1 Primary Intermediate Server CA
+ SAN dNSName: www.huque.com
+ SAN dNSName: huque.com
 
 Connecting to IPv4 address: 50.116.63.23 port 443
 TLSv1.2 handshake succeeded.
 Cipher: TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384
-Certificate chain:
- 0 Subject: www.huque.com
-   Issuer : StartCom Class 1 Primary Intermediate Server CA
- 1 Subject: StartCom Class 1 Primary Intermediate Server CA
-   Issuer : StartCom Certification Authority
+Peer Certificate chain:
+ 0 Subject CN: www.huque.com
+   Issuer  CN: StartCom Class 1 Primary Intermediate Server CA
+ 1 Subject CN: StartCom Class 1 Primary Intermediate Server CA
+   Issuer  CN: StartCom Certification Authority
  SAN dNSName: www.huque.com
  SAN dNSName: huque.com
 DANE TLSA 3 1 1 [b760c12119c3...] matched EE certificate at depth 0
+Validated Certificate chain:
+ 0 Subject CN: www.huque.com
+   Issuer  CN: StartCom Class 1 Primary Intermediate Server CA
+ SAN dNSName: www.huque.com
+ SAN dNSName: huque.com
 ```
 
 Checking the HTTPS server at www.amazon.com (no TLSA records):
 ```
 $ danetls www.amazon.com 443
-No TLSA records found; Performing PKIX-only validation.
-
-Connecting to IPv4 address: 54.239.25.200 port 443
+No TLSA records found.
+Connecting to IPv4 address: 54.239.26.128 port 443
 TLSv1.2 handshake succeeded.
 Cipher: TLSv1.2 ECDHE-RSA-AES128-GCM-SHA256
 Verified peername: www.amazon.com
@@ -176,19 +184,25 @@ send: STARTTLS
 recv: 220 2.0.0 Ready to start TLS
 TLSv1.2 handshake succeeded.
 Cipher: TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384
-Certificate chain:
- 0 Subject: *.ietf.org
-   Issuer : Starfield Secure Certificate Authority - G2
- 1 Subject: Starfield Secure Certificate Authority - G2
-   Issuer : Starfield Root Certificate Authority - G2
- 2 Subject: Starfield Root Certificate Authority - G2
-   Issuer : Starfield Root Certificate Authority - G2
- 3 Subject: Starfield Root Certificate Authority - G2
-   Issuer : Starfield Root Certificate Authority - G2
+Peer Certificate chain:
+ 0 Subject CN: *.ietf.org
+   Issuer  CN: Starfield Secure Certificate Authority - G2
+ 1 Subject CN: Starfield Secure Certificate Authority - G2
+   Issuer  CN: Starfield Root Certificate Authority - G2
+ 2 Subject CN: Starfield Root Certificate Authority - G2
+   Issuer  CN: (Null)
+ 3 Subject CN: (Null)
+   Issuer  CN: (Null)
  SAN dNSName: *.ietf.org
  SAN dNSName: ietf.org
  SAN dNSName: *.ietf.org
 DANE TLSA 3 1 1 [0c72ac70b745...] matched EE certificate at depth 0
+Validated Certificate chain:
+ 0 Subject CN: *.ietf.org
+   Issuer  CN: Starfield Secure Certificate Authority - G2
+ SAN dNSName: *.ietf.org
+ SAN dNSName: ietf.org
+ SAN dNSName: *.ietf.org
 
 Connecting to IPv4 address: 4.31.198.44 port 25
 recv: 220 ietfa.amsl.com ESMTP Postfix
@@ -206,19 +220,25 @@ send: STARTTLS
 recv: 220 2.0.0 Ready to start TLS
 TLSv1.2 handshake succeeded.
 Cipher: TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384
-Certificate chain:
- 0 Subject: *.ietf.org
-   Issuer : Starfield Secure Certificate Authority - G2
- 1 Subject: Starfield Secure Certificate Authority - G2
-   Issuer : Starfield Root Certificate Authority - G2
- 2 Subject: Starfield Root Certificate Authority - G2
-   Issuer : Starfield Root Certificate Authority - G2
- 3 Subject: Starfield Root Certificate Authority - G2
-   Issuer : Starfield Root Certificate Authority - G2
+Peer Certificate chain:
+ 0 Subject CN: *.ietf.org
+   Issuer  CN: Starfield Secure Certificate Authority - G2
+ 1 Subject CN: Starfield Secure Certificate Authority - G2
+   Issuer  CN: Starfield Root Certificate Authority - G2
+ 2 Subject CN: Starfield Root Certificate Authority - G2
+   Issuer  CN: (Null)
+ 3 Subject CN: (Null)
+   Issuer  CN: (Null)
  SAN dNSName: *.ietf.org
  SAN dNSName: ietf.org
  SAN dNSName: *.ietf.org
 DANE TLSA 3 1 1 [0c72ac70b745...] matched EE certificate at depth 0
+Validated Certificate chain:
+ 0 Subject CN: *.ietf.org
+   Issuer  CN: Starfield Secure Certificate Authority - G2
+ SAN dNSName: *.ietf.org
+ SAN dNSName: ietf.org
+ SAN dNSName: *.ietf.org
 ```
 
 Checking with debugging (-d) XMPP s2s service at mailbox.org (xmpp.mailbox.org)
@@ -230,21 +250,26 @@ TLSA: 3 1 1 4758af6f02dfb5dc8795fa402e77a8a0486af5e85d2ca60c294476aadc40b220
 
 Connecting to IPv4 address: 80.241.60.206 port 5269
 send: <?xml version='1.0'?><stream:stream to='mailbox.org' version='1.0' xml:lang='en' xmlns='jabber:server' xmlns:stream='http://etherx.jabber.org/streams'>
-recv: <?xml version='1.0'?><stream:stream xmlns:db='jabber:server:dialback' xmlns:stream='http://etherx.jabber.org/streams' version='1.0' from='mailbox.org' id='4238a37a-919a-41e3-a8e4-0f0c9ce9a8af' to='' xml:lang='en' xmlns='jabber:server'><stream:features><dialback xmlns='urn:xmpp:features:dialback'/><starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'><required/></starttls></stream:features>
+recv: <?xml version='1.0'?><stream:stream xmlns:db='jabber:server:dialback' xmlns:stream='http://etherx.jabber.org/streams' version='1.0' from='mailbox.org' id='2d26a4ec-36e8-416d-9067-60e805967466' to='' xml:lang='en' xmlns='jabber:server'><stream:features><starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'><required/></starttls><dialback xmlns='urn:xmpp:features:dialback'/></stream:features>
 send: <starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>
 recv: <proceed xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>
 TLSv1.2 handshake succeeded.
 Cipher: TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384
-Certificate chain:
- 0 Subject: *.mailbox.org
-   Issuer : SwissSign Server Silver CA 2014 - G22
- 1 Subject: SwissSign Server Silver CA 2014 - G22
-   Issuer : SwissSign Silver CA - G2
- 2 Subject: SwissSign Silver CA - G2
-   Issuer : SwissSign Silver CA - G2
+Peer Certificate chain:
+ 0 Subject CN: *.mailbox.org
+   Issuer  CN: SwissSign Server Silver CA 2014 - G22
+ 1 Subject CN: SwissSign Server Silver CA 2014 - G22
+   Issuer  CN: SwissSign Silver CA - G2
+ 2 Subject CN: SwissSign Silver CA - G2
+   Issuer  CN: SwissSign Silver CA - G2
  SAN dNSName: *.mailbox.org
  SAN dNSName: mailbox.org
 DANE TLSA 3 1 1 [4758af6f02df...] matched EE certificate at depth 0
+Validated Certificate chain:
+ 0 Subject CN: *.mailbox.org
+   Issuer  CN: SwissSign Server Silver CA 2014 - G22
+ SAN dNSName: *.mailbox.org
+ SAN dNSName: mailbox.org
 ```
 
 ### Other examples
