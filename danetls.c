@@ -125,7 +125,7 @@ int parse_options(const char *progname, int argc, char **argv)
 
 void print_cert_chain(STACK_OF(X509) *chain)
 {
-    int i;
+    int i, rc;
     char buffer[1024];
     STACK_OF(GENERAL_NAME) *subjectaltnames = NULL;
 
@@ -135,12 +135,12 @@ void print_cert_chain(STACK_OF(X509) *chain)
     }
 
     for (i = 0; i < sk_X509_num(chain); i++) {
-	X509_NAME_get_text_by_NID(X509_get_subject_name(sk_X509_value(chain, i)),
+	rc = X509_NAME_get_text_by_NID(X509_get_subject_name(sk_X509_value(chain, i)),
 				  NID_commonName, buffer, sizeof buffer);
-	fprintf(stdout, "%2d Subject: %s\n", i, buffer);
-	X509_NAME_get_text_by_NID(X509_get_issuer_name(sk_X509_value(chain, i)),
+	fprintf(stdout, "%2d Subject CN: %s\n", i, (rc >= 0 ? buffer: "(Null)"));
+	rc = X509_NAME_get_text_by_NID(X509_get_issuer_name(sk_X509_value(chain, i)),
 				  NID_commonName, buffer, sizeof buffer);
-	fprintf(stdout, "   Issuer : %s\n", buffer);
+	fprintf(stdout, "   Issuer  CN: %s\n", (rc >= 0 ? buffer: "(Null)"));
     }
 
     subjectaltnames = X509_get_ext_d2i(sk_X509_value(chain, 0),
