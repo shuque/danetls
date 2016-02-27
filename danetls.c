@@ -7,7 +7,7 @@
  * we query with AD=1.
  * Connects to given host and port, establishes TLS session, and 
  * attempts to authenticate peer with DANE first, and lacking TLSA
- * records, failing back to normal PKIX authentication.
+ * records, falling back to normal PKIX authentication.
  *
  * Command line options can specify whether to do DANE or PKIX modes,
  * an alternate certificate store file, and what STARTTLS application 
@@ -124,19 +124,17 @@ int parse_options(const char *progname, int argc, char **argv)
  * that was used to validate the server.
  */
 
-void print_cert_chain(SSL *ssl)
+void print_cert_chain(STACK_OF(X509) *chain)
 {
     int i;
     char buffer[1024];
-    STACK_OF(X509) *chain = SSL_get_peer_cert_chain(ssl);
     STACK_OF(GENERAL_NAME) *subjectaltnames = NULL;
 
     if (chain == NULL) {
-	fprintf(stdout, "No Peer Certificate.");
+	fprintf(stdout, "No Certificate Chain.");
 	return;
     }
 
-    fprintf(stdout, "Certificate chain:\n");
     for (i = 0; i < sk_X509_num(chain); i++) {
 	X509_NAME_get_text_by_NID(X509_get_subject_name(sk_X509_value(chain, i)),
 				  NID_commonName, buffer, sizeof buffer);
@@ -160,6 +158,39 @@ void print_cert_chain(SSL *ssl)
     }
 
     /* TODO: how to free stack of certs? */
+    return;
+}
+
+/*
+ * print_peer_cert_chain()
+ * Note: this prints the certificate chain presented by the server
+ * in its Certificate handshake message, not the certificate chain
+ * that was used to validate the server.
+ */
+
+void print_peer_cert_chain(SSL *ssl)
+{
+    STACK_OF(X509) *chain = SSL_get_peer_cert_chain(ssl);
+    fprintf(stdout, "Peer Certificate chain:\n");
+    print_cert_chain(chain);
+    return;
+}
+
+
+/*
+ * print_validated_chain()
+ * Prints the verified certificate chain of the peer including the peer's 
+ * end entity certificate, using SSL_get0_verified_chain(). Must be called
+ * after a session has been successfully established. If peer verification
+ * was not successful (as indicated by SSL_get_verify_result() not
+ * returning X509_V_OK) the chain may be incomplete or invalid.
+ */
+
+void print_validated_chain(SSL *ssl)
+{
+    STACK_OF(X509) *chain = SSL_get0_verified_chain(ssl);
+    fprintf(stdout, "Validated Certificate chain:\n");
+    print_cert_chain(chain);
     return;
 }
 
@@ -305,8 +336,8 @@ int main(int argc, char **argv)
     }
 
     /*
-     * Loop over all addresses from getaddrinfo(), connect to each,
-     * establish TLS connection, and perform peer authentication.
+     * Loop over all addresses, connect to each, establish TLS
+     * connection, and perform peer authentication.
      */
 
     for (gaip = addresses; gaip != NULL; gaip = gaip->ai_next) {
@@ -445,7 +476,7 @@ int main(int argc, char **argv)
 
 	/* Print Certificate Chain information (if in debug mode) */
 	if (debug)
-	    print_cert_chain(ssl);
+	    print_peer_cert_chain(ssl);
 
 	/* Report results of DANE or PKIX authentication of peer cert */
 	if ((rcl = SSL_get_verify_result(ssl)) == X509_V_OK) {
@@ -470,6 +501,9 @@ int main(int argc, char **argv)
 		/* Name checks were in scope and matched the peername */
 		fprintf(stdout, "Verified peername: %s\n", peername);
 	    }
+	    /* Print verified certificate chain (if in debug mode) */
+	    if (debug)
+		print_validated_chain(ssl);
 	} else {
 	    /* Authentication failed */
 	    count_fail++;
