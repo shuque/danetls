@@ -92,11 +92,8 @@ ldns_rr_list *get_addresses_type(ldns_resolver *resolver,
 
     hostname_rdf = ldns_dname_new_frm_str(hostname);
 
-    ldns_p = ldns_resolver_query(resolver,
-				 hostname_rdf,
-				 rrtype,
-				 LDNS_RR_CLASS_IN,
-				 LDNS_RD | LDNS_AD);
+    ldns_p = ldns_resolver_query(resolver, hostname_rdf, rrtype,
+				 LDNS_RR_CLASS_IN, LDNS_RD | LDNS_AD);
     ldns_rdf_deep_free(hostname_rdf);
 
     if (ldns_p == (ldns_pkt *) NULL) {
@@ -201,14 +198,11 @@ tlsa_rdata *get_tlsa(ldns_resolver *resolver,
     ldns_pkt_rcode rcode;
     tlsa_rdata *tlsa_rdata_list = NULL, *current = NULL;
 
-    snprintf(domainstring, 512, "_%s._tcp.%s", port, hostname);
+    snprintf(domainstring, sizeof(domainstring), "_%s._tcp.%s", port, hostname);
     tlsa_owner = ldns_dname_new_frm_str(domainstring);
 
-    ldns_p = ldns_resolver_query(resolver,
-				 tlsa_owner,
-				 LDNS_RR_TYPE_TLSA,
-				 LDNS_RR_CLASS_IN,
-				 LDNS_RD | LDNS_AD);
+    ldns_p = ldns_resolver_query(resolver, tlsa_owner, LDNS_RR_TYPE_TLSA,
+				 LDNS_RR_CLASS_IN, LDNS_RD | LDNS_AD);
     ldns_rdf_deep_free(tlsa_owner);
 
     if (ldns_p == (ldns_pkt *) NULL) {
@@ -280,7 +274,7 @@ ldns_resolver *get_resolver(void)
 
     ldns_rc = ldns_resolver_new_frm_file(&resolver, NULL);
     if (ldns_rc != LDNS_STATUS_OK) {
-	fprintf(stderr, "ldns_resolver_new_frm_file() failed: %s\n",
+	fprintf(stderr, "failed to initialize DNS resolver: %s\n",
 		ldns_get_errorstr_by_id(ldns_rc));
 	return NULL;
     }
