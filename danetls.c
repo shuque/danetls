@@ -119,9 +119,8 @@ int parse_options(const char *progname, int argc, char **argv)
 
 /*
  * print_cert_chain()
- * Note: this prints the certificate chain presented by the server
- * in its Certificate handshake message, not the certificate chain
- * that was used to validate the server.
+ * Print contents of given certificate chain.
+ * Only DN common names of each cert + subjectaltname DNS names of end entity.
  */
 
 void print_cert_chain(STACK_OF(X509) *chain)
