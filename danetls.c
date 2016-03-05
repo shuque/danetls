@@ -137,10 +137,10 @@ void print_cert_chain(STACK_OF(X509) *chain)
     for (i = 0; i < sk_X509_num(chain); i++) {
 	rc = X509_NAME_get_text_by_NID(X509_get_subject_name(sk_X509_value(chain, i)),
 				  NID_commonName, buffer, sizeof buffer);
-	fprintf(stdout, "%2d Subject CN: %s\n", i, (rc >= 0 ? buffer: "(Null)"));
+	fprintf(stdout, "%2d Subject CN: %s\n", i, (rc >=0 ? buffer: "(None)"));
 	rc = X509_NAME_get_text_by_NID(X509_get_issuer_name(sk_X509_value(chain, i)),
 				  NID_commonName, buffer, sizeof buffer);
-	fprintf(stdout, "   Issuer  CN: %s\n", (rc >= 0 ? buffer: "(Null)"));
+	fprintf(stdout, "   Issuer  CN: %s\n", (rc >= 0 ? buffer: "(None)"));
     }
 
     subjectaltnames = X509_get_ext_d2i(sk_X509_value(chain, 0),
@@ -201,7 +201,8 @@ void print_validated_chain(SSL *ssl)
 int main(int argc, char **argv)
 {
 
-    const char *progname, *hostname, *port;
+    const char *progname, *hostname;
+    uint16_t port;
     ldns_resolver *resolver;
     struct addrinfo *gaip = NULL;
     char ipstring[INET6_ADDRSTRLEN], *cp;
@@ -233,7 +234,7 @@ int main(int argc, char **argv)
     if (argc != 2) print_usage(progname);
 
     hostname = argv[0];
-    port = argv[1];
+    port = atoi(argv[1]);
 
     /*
      * DNS Queries:
@@ -243,7 +244,9 @@ int main(int argc, char **argv)
      * a linked list of structures holding TLSA rdata sets.
      */
 
-    resolver = get_resolver();
+    resolver = get_resolver(NULL);
+    if (resolver == NULL)
+	goto cleanup;
     addresses = get_addresses(resolver, hostname, port);
 
     if (auth_mode != MODE_PKIX)
@@ -353,7 +356,7 @@ int main(int argc, char **argv)
                     ipstring, ntohs(sa6->sin6_port));
         }
 
-        sock = socket(gaip->ai_family, SOCK_STREAM, 0);
+        sock = socket(gaip->ai_family, SOCK_STREAM, IPPROTO_TCP);
         if (sock == -1) {
             perror("socket");
 	    count_fail++;
