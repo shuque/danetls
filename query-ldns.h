@@ -8,12 +8,23 @@
 
 #include <ldns/ldns.h>
 
+
+/*
+ * Flags: dns bogus or indeterminate; authenticated responses 
+ */
+
+int dns_bogus_or_indeterminate;
+int v4_authenticated;
+int v6_authenticated;
+int mx_authenticated;
+int srv_authenticated;
+int tlsa_authenticated;
+
 /*
  * addresses: (head of) linked list of addrinfo structures
  */
 
 size_t address_count;
-int v4_authenticated, v6_authenticated;
 
 struct addrinfo *
 insert_addrinfo(struct addrinfo **headp,
@@ -28,7 +39,6 @@ insert_addrinfo(struct addrinfo **headp,
 
 size_t tlsa_count;
 ldns_pkt_rcode tlsa_response_rcode;
-int tlsa_authenticated;
 
 typedef struct tlsa_rdata {
     uint8_t usage;
@@ -46,21 +56,15 @@ void free_tlsa(tlsa_rdata *head);
 
 
 /*
- * Flag DNS response that is uanauthenticable.
- */
-
-int dns_bogus_or_indeterminate;
-
-/*
  * get_addresses_type() and get_addresses()
  */
 
 ldns_rr_list *get_addresses_type(ldns_resolver *resolver,
                                  ldns_rr_type rrtype,
-                                 const char *hostname);
+                                 ldns_rdf *host_rdf);
 
 struct addrinfo *get_addresses(ldns_resolver *resolver,
-			       const char *hostname, const char *port);
+			       const char *hostname, uint16_t port);
 
 
 /*
@@ -69,8 +73,8 @@ struct addrinfo *get_addresses(ldns_resolver *resolver,
  */
 
 tlsa_rdata *get_tlsa(ldns_resolver *resolver, 
-		     const char *hostname, const char *port);
+		     const char *hostname, uint16_t port);
 
-ldns_resolver *get_resolver(void);
+ldns_resolver *get_resolver(char *conffile);
 
 #endif /* __QUERY_LDNS_H__ */
