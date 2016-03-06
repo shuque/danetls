@@ -174,8 +174,6 @@ struct addrinfo *load_addresses(ldns_rr_list *rr_list, uint16_t port)
     address_count = ldns_rr_list_rr_count(rr_list);
 
     for (i = 0; i < address_count; i++) {
-        struct addrinfo *aip = malloc(sizeof(struct addrinfo));
-        aip->ai_next = NULL;
         rr = ldns_rr_list_rr(rr_list, i);
         current = load_address(&addresses, current, rr, port);
     }
