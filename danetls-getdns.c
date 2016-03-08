@@ -111,28 +111,28 @@ int parse_options(const char *progname, int argc, char **argv)
 
 /*
  * print_cert_chain()
+ * Print contents of given certificate chain.
+ * Only DN common names of each cert + subjectaltname DNS names of end entity.
  */
 
-void print_cert_chain(SSL *ssl)
+void print_cert_chain(STACK_OF(X509) *chain)
 {
-    int i;
+    int i, rc;
     char buffer[1024];
-    STACK_OF(X509) *chain = SSL_get_peer_cert_chain(ssl);
     STACK_OF(GENERAL_NAME) *subjectaltnames = NULL;
 
     if (chain == NULL) {
-	fprintf(stdout,"No Peer Certificate.");
-        return;
+	fprintf(stdout, "No Certificate Chain.");
+	return;
     }
 
-    fprintf(stdout, "Certificate chain:\n");
     for (i = 0; i < sk_X509_num(chain); i++) {
-        X509_NAME_get_text_by_NID(X509_get_subject_name(sk_X509_value(chain, i)),
-                                  NID_commonName, buffer, sizeof buffer);
-        fprintf(stdout, "%2d Subject: %s\n", i, buffer);
-        X509_NAME_get_text_by_NID(X509_get_issuer_name(sk_X509_value(chain, i)),
-                                  NID_commonName, buffer, sizeof buffer);
-        fprintf(stdout, "   Issuer : %s\n", buffer);
+	rc = X509_NAME_get_text_by_NID(X509_get_subject_name(sk_X509_value(chain, i)),
+				       NID_commonName, buffer, sizeof buffer);
+	fprintf(stdout, "%2d Subject CN: %s\n", i, (rc >=0 ? buffer: "(None)"));
+	rc = X509_NAME_get_text_by_NID(X509_get_issuer_name(sk_X509_value(chain, i)),
+				       NID_commonName, buffer, sizeof buffer);
+	fprintf(stdout, "   Issuer  CN: %s\n", (rc >= 0 ? buffer: "(None)"));
     }
 
     subjectaltnames = X509_get_ext_d2i(sk_X509_value(chain, 0),
@@ -154,13 +154,48 @@ void print_cert_chain(SSL *ssl)
 
 
 /*
+ * print_peer_cert_chain()
+ * Note: this prints the certificate chain presented by the server
+ * in its Certificate handshake message, not the certificate chain
+ * that was used to validate the server.
+ */
+
+void print_peer_cert_chain(SSL *ssl)
+{
+    STACK_OF(X509) *chain = SSL_get_peer_cert_chain(ssl);
+    fprintf(stdout, "Peer Certificate chain:\n");
+    print_cert_chain(chain);
+    return;
+}
+
+
+/*
+ * print_validated_chain()
+ * Prints the verified certificate chain of the peer including the peer's
+ * end entity certificate, using SSL_get0_verified_chain(). Must be called
+ * after a session has been successfully established. If peer verification
+ * was not successful (as indicated by SSL_get_verify_result() not
+ * returning X509_V_OK) the chain may be incomplete or invalid.
+ */
+
+void print_validated_chain(SSL *ssl)
+{
+    STACK_OF(X509) *chain = SSL_get0_verified_chain(ssl);
+    fprintf(stdout, "Validated Certificate chain:\n");
+    print_cert_chain(chain);
+    return;
+}
+
+
+/*
  * main(): DANE TLSA test program.
  */
 
 int main(int argc, char **argv)
 {
 
-    const char *progname, *hostname, *port;
+    const char *progname, *hostname;
+    uint16_t port;
     struct addrinfo *gaip;
     char ipstring[INET6_ADDRSTRLEN], *cp;
     struct sockaddr_in *sa4;
@@ -188,7 +223,7 @@ int main(int argc, char **argv)
     if (argc != 2) print_usage(progname);
 
     hostname = argv[0];
-    port = argv[1];
+    port = atoi(argv[1]);
 
     /*
      * Obtain address and TLSA records with getdns library calls
@@ -197,6 +232,20 @@ int main(int argc, char **argv)
     rc = do_dns_queries(hostname, port);
     if (rc != 1) {
 	fprintf(stderr, "do_dns_queries() failed.\n");
+	goto cleanup;
+    }
+
+    /*
+     * Bail out if responses are bogus or indeterminate
+     */
+
+    if (dns_bogus_or_indeterminate) {
+	fprintf(stderr, "DNSSEC status of responses is bogus or indeterminate.\n");
+        goto cleanup;
+    }
+
+    if (addresses == NULL) {
+	fprintf(stderr, "No address records found, exiting.\n");
 	goto cleanup;
     }
 
@@ -388,7 +437,7 @@ int main(int argc, char **argv)
 
 	/* Print Certificate Chain information (if in debug mode) */
 	if (debug)
-	    print_cert_chain(ssl);
+	    print_peer_cert_chain(ssl);
 
 	/* Report results of DANE or PKIX authentication of peer cert */
 	if ((rcl = SSL_get_verify_result(ssl)) == X509_V_OK) {
@@ -413,6 +462,9 @@ int main(int argc, char **argv)
 		/* Name checks were in scope and matched the peername */
 		fprintf(stdout, "Verified peername: %s\n", peername);
 	    }
+	    /* Print verified certificate chain (if in debug mode) */
+	    if (debug)
+		print_validated_chain(ssl);
 	} else {
 	    /* Authentication failed */
 	    count_fail++;
@@ -431,6 +483,7 @@ int main(int argc, char **argv)
     }
 
 cleanup:
+    freeaddrinfo(addresses);
     free_tlsa(tlsa_rdata_list);
     if (ctx)
 	SSL_CTX_free(ctx);

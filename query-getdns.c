@@ -33,10 +33,24 @@ extern int debug;
 extern int recursion;
 extern enum AUTH_MODE auth_mode;
 
+
+/*
+ * bogus/indeterminate flag.
+ */
+
+int dns_bogus_or_indeterminate = 0;
+int address_authenticated = 0;
+int v4_authenticated = 0;
+int v6_authenticated = 0;
+int mx_authenticated = 0;
+int srv_authenticated = 0;
+int tlsa_authenticated = 0;
+
 /*
  * addresses: (head of) linked list of addrinfo structures
  */
 
+size_t address_count = 0;
 struct addrinfo *addresses = NULL;
 
 struct addrinfo *
@@ -71,6 +85,8 @@ struct addrinfo *make_addrinfo(getdns_dict *address,
     }
 
     aip = malloc(sizeof(struct addrinfo));
+    aip->ai_flags = 0;
+    aip->ai_canonname = NULL;
     aip->ai_next = NULL;
 
     if (!strncmp((const char *) addr_type->data, "IPv4", 4)) {
@@ -132,6 +148,66 @@ void free_tlsa(tlsa_rdata *head)
 
 
 /*
+ * all_responses_secure()
+ */
+
+int all_responses_secure(getdns_dict *response)
+{
+    size_t i, cnt_reply = 0, cnt_secure = 0;
+    uint32_t dnssec_status;
+    getdns_return_t rc;
+    getdns_list *replies_tree;
+    getdns_dict *reply;
+
+    if ((rc = getdns_dict_get_list(response, "replies_tree", &replies_tree))) {
+        fprintf(stderr, "FAIL getting replies from responsedict: %s\n",
+                getdns_get_errorstr_by_id(rc));
+        return 0;
+    }
+
+    (void) getdns_list_get_length(replies_tree, &cnt_reply);
+    if (cnt_reply == 0) {
+	dns_bogus_or_indeterminate = 1;
+	return 0;
+    }
+
+    for (i = 0; i < cnt_reply; i++) {
+
+        if ((rc = getdns_list_get_dict(replies_tree, i, &reply))) {
+            fprintf(stderr, "FAIL: getting reply from response dict: %s\n",
+                    getdns_get_errorstr_by_id(rc));
+            return 0;
+        }
+
+        if ((rc = getdns_dict_get_int(reply, "dnssec_status", &dnssec_status))) {
+            fprintf(stderr, "FAIL: error obtaining dnssec status: %s\n",
+                    getdns_get_errorstr_by_id(rc));
+            return 0;
+        }
+
+	switch (dnssec_status) {
+        case GETDNS_DNSSEC_SECURE:
+            cnt_secure++;
+            break;
+        case GETDNS_DNSSEC_INSECURE:
+            break;
+        default:
+            dns_bogus_or_indeterminate = 1;
+        }
+
+    }
+
+    if (cnt_reply > 0 && cnt_secure == cnt_reply)
+	return 1;
+    else {
+	if (cnt_reply == 0)
+	    dns_bogus_or_indeterminate = 1;
+	return 0;
+    }
+}
+
+
+/*
  * callback function for address lookups
  */
 
@@ -143,7 +219,7 @@ void cb_address(getdns_context *ctx,
 {
     UNUSED_PARAM(ctx);
     getdns_return_t rc;
-    uint32_t status;
+    uint32_t status=0;
     qinfo *qip = (qinfo *) userarg;
     const char *hostname = qip->qname;
     uint16_t port = qip->port;
@@ -163,16 +239,38 @@ void cb_address(getdns_context *ctx,
 	return;
     }
 
-    if ((rc = getdns_dict_get_int(response, "status", &status))) {
-	fprintf(stderr, "FAIL: %s: Error obtaining status code: %s\n", 
-		hostname, getdns_get_errorstr_by_id(rc));
-	goto cleanup;
+    /*
+     * Check authenticated status of responses; set dns_bogus_indeterminate flag
+     */
+    if (all_responses_secure(response)) {
+	address_authenticated = 1;
+	v4_authenticated = 1;
+	v6_authenticated = 1 ;
     }
 
-    if (status != GETDNS_RESPSTATUS_GOOD) {
-	fprintf(stderr, "FAIL: %s: %s\n",
-		hostname, getdns_get_errorstr_by_id(status));
+    (void) getdns_dict_get_int(response, "status", &status);
+
+    switch (status) {
+    case GETDNS_RESPSTATUS_GOOD:
+	break;
+    case GETDNS_RESPSTATUS_NO_NAME:
+	fprintf(stderr, "FAIL: %s: Non existent domain name.\n", hostname);
 	goto cleanup;
+    case GETDNS_RESPSTATUS_ALL_TIMEOUT:
+	dns_bogus_or_indeterminate = 1;
+	fprintf(stderr, "FAIL: %s: Query timed out.\n", hostname);
+	goto cleanup;
+    case GETDNS_RESPSTATUS_NO_SECURE_ANSWERS:
+	fprintf(stderr, "%s: Insecure address records.\n", hostname);
+	goto cleanup;
+    case GETDNS_RESPSTATUS_ALL_BOGUS_ANSWERS:
+	dns_bogus_or_indeterminate = 1;
+	fprintf(stderr, "FAIL: %s: All bogus answers.\n", hostname);
+	goto cleanup;	
+    default:
+        dns_bogus_or_indeterminate = 1;
+        fprintf(stderr, "FAIL: %s: error status code: %d.\n", hostname, status);
+        goto cleanup;
     }
 
     if ((rc = getdns_dict_get_list(response, "just_address_answers", 
@@ -230,7 +328,7 @@ void cb_tlsa(getdns_context *ctx,
 {
     UNUSED_PARAM(ctx);
     getdns_return_t rc;
-    uint32_t status;
+    uint32_t status=0, dstatus=0;
     qinfo *qip = (qinfo *) userarg;
     const char *hostname = qip->qname;
     getdns_list    *replies_tree, *answer;
@@ -249,27 +347,29 @@ void cb_tlsa(getdns_context *ctx,
 	return;
     }
 
-    if ((rc = getdns_dict_get_int(response, "status", &status))) {
-	fprintf(stderr, "FAIL: %s/TLSA: Error obtaining status code: %s\n", 
-		hostname, getdns_get_errorstr_by_id(rc));
-	goto cleanup;
-    }
+    (void) getdns_dict_get_int(response, "status", &status);
 
-    if (status != GETDNS_RESPSTATUS_GOOD) {
-	if (debug) 
-	    switch (status) {
-	    case GETDNS_RESPSTATUS_NO_SECURE_ANSWERS:
-		fprintf(stderr, "FAIL: %s/TLSA: No secure answers found.\n", 
-			hostname);
-		break;
-	    case GETDNS_RESPSTATUS_ALL_BOGUS_ANSWERS:
-		fprintf(stderr, "FAIL: %s/TLSA: No secure answers found (all bogus).\n", hostname);
-		break;
-	    default:
-		fprintf(stderr, "FAIL: %s/TLSA: %s\n",
-			hostname, getdns_get_errorstr_by_id(status));
-	    }
+    switch (status) {
+    case GETDNS_RESPSTATUS_GOOD:
+        break;
+    case GETDNS_RESPSTATUS_NO_NAME:
+        fprintf(stderr, "FAIL: %s: Non existent domain name.\n", hostname);
+        goto cleanup;
+    case GETDNS_RESPSTATUS_ALL_TIMEOUT:
+        dns_bogus_or_indeterminate = 1;
+        fprintf(stderr, "FAIL: %s: Query timed out.\n", hostname);
+        goto cleanup;
+    case GETDNS_RESPSTATUS_NO_SECURE_ANSWERS:
+        fprintf(stderr, "%s: Insecure address records.\n", hostname);
 	goto cleanup;
+    case GETDNS_RESPSTATUS_ALL_BOGUS_ANSWERS:
+        dns_bogus_or_indeterminate = 1;
+        fprintf(stderr, "FAIL: %s: All bogus answers.\n", hostname);
+        goto cleanup;
+    default:
+        dns_bogus_or_indeterminate = 1;
+        fprintf(stderr, "FAIL: %s: error status code: %d.\n", hostname, status);
+        goto cleanup;
     }
 
     if ((rc = getdns_dict_get_list(response, "replies_tree", 
@@ -282,11 +382,13 @@ void cb_tlsa(getdns_context *ctx,
     (void) getdns_list_get_length(replies_tree, &num_replies);
 
     if (num_replies <= 0) {
-	printf("FAIL: %s: No TLSA records found.\n", hostname);
+	printf("FAIL: %s: No response to TLSA query.\n", hostname);
+	dns_bogus_or_indeterminate = 1;
 	goto cleanup;
     }
 
     tlsa_rdata *current = tlsa_rdata_list;
+    size_t auth_count = 0;
 
     for (i = 0; i < num_replies; i++) {
 	
@@ -295,6 +397,24 @@ void cb_tlsa(getdns_context *ctx,
 		    hostname, getdns_get_errorstr_by_id(rc));
 	    break;
 	}
+
+        if ((rc = getdns_dict_get_int(reply, "dnssec_status", &dstatus))) {
+            fprintf(stderr, "FAIL: %s/TLSA: error obtaining dnssec status: %s\n",
+                    hostname, getdns_get_errorstr_by_id(rc));
+            goto cleanup;
+	}
+
+        switch (dstatus) {
+	case GETDNS_DNSSEC_SECURE:
+            auth_count++;
+            break;
+        case GETDNS_DNSSEC_INSECURE:
+            fprintf(stdout, "TLSA response %zu is insecure.\n", i);
+            break;
+        default:
+            dns_bogus_or_indeterminate = 1;
+	}
+
 	if ((rc = getdns_dict_get_list(reply, "answer", &answer))) {
 	    fprintf(stderr, "FAIL: %s/TLSA: getting answer section: %s\n",
 		    hostname, getdns_get_errorstr_by_id(rc));
@@ -362,6 +482,9 @@ void cb_tlsa(getdns_context *ctx,
 	}
     }
 
+    if (auth_count == num_replies)
+        tlsa_authenticated = 1;
+
 cleanup:
     free(qip);
     getdns_dict_destroy(response);
@@ -372,21 +495,18 @@ cleanup:
 
 /*
  * do_dns_queries()
- * asynchronously dispatch address and TLSA queries, wait for results,
- * populate address and TLSA set data structures.
+ * asynchronously dispatch address and TLSA queries & wait for results.
+ * Response data is obtained by the associated callback functions.
  */
 
-int do_dns_queries(const char *hostname, const char *port)
+int do_dns_queries(const char *hostname, uint16_t port)
 {
 
     char domainstring[512];
-    getdns_context    *context = NULL;
-    getdns_dict       *extensions = NULL;
-    getdns_return_t   rc;
+    getdns_context *context = NULL;
+    getdns_dict *extensions = NULL;
+    getdns_return_t rc;
     struct event_base *evb;
-    int port_int;
-
-    port_int     = atoi(port);
 
     rc = getdns_context_create(&context, 1);
     if (rc != GETDNS_RETURN_GOOD) {
@@ -402,12 +522,22 @@ int do_dns_queries(const char *hostname, const char *port)
 	fprintf(stderr, "FAIL: Error creating extensions dict\n");
 	return 0;
     }
+
+    if ((rc = getdns_dict_set_int(extensions, "dnssec_return_status", 
+				  GETDNS_EXTENSION_TRUE))) {
+	fprintf(stderr, "FAIL: Error setting dnssec_return_status: %s\n",
+		getdns_get_errorstr_by_id(rc));
+	return 0;
+    }
+
+#if 0
     if ((rc = getdns_dict_set_int(extensions, "dnssec_return_only_secure", 
 				  GETDNS_EXTENSION_TRUE))) {
 	fprintf(stderr, "FAIL: Error setting dnssec_return_only_secure: %s\n",
 		getdns_get_errorstr_by_id(rc));
 	return 0;
     }
+#endif
 
     if ( (evb = event_base_new()) == NULL ) {
 	fprintf(stderr, "FAIL: event base creation failed.\n");
@@ -420,13 +550,13 @@ int do_dns_queries(const char *hostname, const char *port)
     getdns_transaction_t tid = 0;
 
     /*
-     * Address Lookups
+     * Address Records lookup
      */
     qinfo *qip = (qinfo *) malloc(sizeof(qinfo));
     qip->qname = hostname;
     qip->qtype = GETDNS_RRTYPE_A;
-    qip->port = port_int;
-    rc = getdns_address(context, hostname, NULL, 
+    qip->port = port;
+    rc = getdns_address(context, hostname, extensions, 
 			(void *) qip, &tid, cb_address);
     if (rc != GETDNS_RETURN_GOOD) {
 	fprintf(stderr, "ERROR: %s getdns_address failed: %s\n", 
@@ -437,14 +567,14 @@ int do_dns_queries(const char *hostname, const char *port)
     }
 
     /*
-     * TLSA record lookup
+     * TLSA Records lookup
      */
     if (auth_mode != MODE_PKIX) {
-	snprintf(domainstring, 512, "_%s._tcp.%s", port, hostname);
+	snprintf(domainstring, sizeof(domainstring), "_%d._tcp.%s", port, hostname);
 	qip = (qinfo *) malloc(sizeof(qinfo));
 	qip->qname = domainstring;
 	qip->qtype = GETDNS_RRTYPE_TLSA;
-	qip->port = port_int;
+	qip->port = port;
 	rc = getdns_general(context, domainstring, GETDNS_RRTYPE_TLSA, extensions, 
 			    (void *) qip, &tid, cb_tlsa);
 	if (rc != GETDNS_RETURN_GOOD) {
