@@ -23,6 +23,12 @@ AD bit in responses from the resolver. The getdns version uses a
 DNSSEC-aware (but not necessarily DNSSEC-validating) resolver and 
 performs its own validation.
 
+With the -d (debug) command line option, the program prints out
+additional information about the TLSA record data, server presented
+certificate chain, the actually validated certificate chain, and
+if STARTTLS was used, the application specific STARTTLS conversation
+that took place.
+
 Pre-requisites:  
 - OpenSSL version 1.1.0-pre3 or later
 - [ldns library](http://www.nlnetlabs.nl/projects/ldns/), for ldns version
