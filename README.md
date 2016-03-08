@@ -8,7 +8,7 @@ specified TLS server and port, connects to the server, establishes a
 TLS session, and attempts to authenticate the server certificate with 
 the DANE TLSA record(s). If no TLSA records are found, it falls back 
 to traditional PKIX authentication. Uses the DANE verification code 
-introduced in OpenSSL 1.1.0-pre2 (released on January 2016) or later.
+in OpenSSL 1.1.0-pre3 or later.
 
 Command line options can specify whether to do DANE or PKIX modes,
 an alternate certificate store file, and what STARTTLS application
@@ -24,7 +24,7 @@ DNSSEC-aware (but not necessarily DNSSEC-validating) resolver and
 performs its own validation.
 
 Pre-requisites:  
-- OpenSSL version 1.1.0-pre2 or later
+- OpenSSL version 1.1.0-pre3 or later
 - [ldns library](http://www.nlnetlabs.nl/projects/ldns/), for ldns version
 - [getdns library](http://getdnsapi.net/), for getdns version
 
