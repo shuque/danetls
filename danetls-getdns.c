@@ -203,6 +203,7 @@ int main(int argc, char **argv)
     int count_success = 0, count_fail = 0, count_tlsa_usable=0;
     int rc, sock, optcount;
     long rcl;
+    int attempt_dane = 0;
 
     SSL_CTX *ctx = NULL;
     SSL *ssl = NULL;
@@ -249,17 +250,31 @@ int main(int argc, char **argv)
 	goto cleanup;
     }
 
-    if (tlsa_rdata_list == NULL) {
-	if (auth_mode == MODE_DANE) {
-	    fprintf(stderr, "No TLSA records; exiting.\n");
-	    goto cleanup;
-	} else if (auth_mode != MODE_PKIX) {
-	    fprintf(stderr, "No TLSA records found; " 
-		    "Performing PKIX-only validation.\n\n");
-	}
+    /*
+     * Set flag to attempt DANE ("attempt_dane") only if TLSA
+     * records were found and both address and TLSA record set
+     * were successfully authenticated with DNSSEC.
+     */
+
+    if (auth_mode == MODE_DANE || auth_mode == MODE_BOTH) {
+        if (tlsa_rdata_list == NULL) {
+	    fprintf(stderr, "No TLSA records found.\n");
+            if (auth_mode == MODE_DANE)
+                goto cleanup;
+        } else if (tlsa_authenticated == 0) {
+            fprintf(stderr, "Insecure TLSA records.\n");
+            if (auth_mode == MODE_DANE)
+                goto cleanup;
+        } else if (v4_authenticated == 0 || v6_authenticated == 0) {
+            fprintf(stderr, "Insecure Address records.\n");
+            if (auth_mode == MODE_DANE)
+                goto cleanup;
+        } else {
+            attempt_dane = 1;
+        }
     }
 
-    if (debug && tlsa_rdata_list != NULL) {
+    if (debug && attempt_dane) {
 	fprintf(stdout, "TLSA records found: %ld\n", tlsa_count);
 	tlsa_rdata *rp;
 	for (rp = tlsa_rdata_list; rp != NULL; rp = rp->next) {
@@ -350,16 +365,15 @@ int main(int argc, char **argv)
 	    continue;
 	}
 
-	if (!tlsa_rdata_list) {
-            if (SSL_set1_host(ssl, hostname) != 1) {
-		fprintf(stderr, "SSL_set1_host() failed.\n");
-		ERR_print_errors_fp(stderr);
-                SSL_free(ssl);
-                close(sock);
-                count_fail++;
-                continue;
-            }
-	} else if (SSL_dane_enable(ssl, hostname) <= 0) {
+        /*
+         * SSL_set1_host() for non-DANE, SSL_dane_enable() for DANE.
+         * For DANE SSL_dane_enable() issues TLS SNI extension; for
+         * non-DANE, we need to explicitly call SSL_set_tlsext_host_name().
+         */
+
+        if (attempt_dane) {
+
+            if (SSL_dane_enable(ssl, hostname) <= 0) {
 	    fprintf(stderr, "SSL_dane_enable() failed.\n");
 	    ERR_print_errors_fp(stderr);
 	    SSL_free(ssl);
@@ -368,12 +382,23 @@ int main(int argc, char **argv)
 	    continue;
 	}
 
+        } else {
+
+            if (SSL_set1_host(ssl, hostname) != 1) {
+	    fprintf(stderr, "SSL_set1_host() failed.\n");
+	    ERR_print_errors_fp(stderr);
+	    SSL_free(ssl);
+	    close(sock);
+	    count_fail++;
+	    continue;
+	}
+            /* Set TLS Server Name Indication extension */
+            (void) SSL_set_tlsext_host_name(ssl, hostname);
+
+        }
+
 	/* No partial label wildcards */
 	SSL_set_hostflags(ssl, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
-
-	/* Set TLS Server Name Indication extension */
-	(void) SSL_set_tlsext_host_name(ssl, 
-					(service_name? service_name : hostname));
 
 	/* Set connect mode (client) and tie socket to TLS context */
 	SSL_set_connect_state(ssl);
