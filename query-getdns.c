@@ -530,15 +530,6 @@ int do_dns_queries(const char *hostname, uint16_t port)
 	return 0;
     }
 
-#if 0
-    if ((rc = getdns_dict_set_int(extensions, "dnssec_return_only_secure", 
-				  GETDNS_EXTENSION_TRUE))) {
-	fprintf(stderr, "FAIL: Error setting dnssec_return_only_secure: %s\n",
-		getdns_get_errorstr_by_id(rc));
-	return 0;
-    }
-#endif
-
     if ( (evb = event_base_new()) == NULL ) {
 	fprintf(stderr, "FAIL: event base creation failed.\n");
 	getdns_context_destroy(context);
