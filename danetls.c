@@ -57,7 +57,8 @@ char *service_name = NULL;
 
 void print_usage(const char *progname)
 {
-    fprintf(stdout, "\nUsage: %s [options] <hostname> <portnumber>\n\n"
+    fprintf(stdout, "\n%s version %s\n"
+	    "\nUsage: %s [options] <hostname> <portnumber>\n\n"
             "       -h:             print this help message\n"
             "       -d:             debug mode\n"
 	    "       -n <name>:      service name\n"
@@ -67,7 +68,7 @@ void print_usage(const char *progname)
 	    "       -s <app>:       use starttls with specified application\n"
 	    "                       ('smtp', 'xmpp-client', 'xmpp-server')\n"
 	    "\n",
-	    progname);
+	    progname, PROGRAM_VERSION, progname);
     exit(3);
 }
 
