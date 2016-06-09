@@ -273,11 +273,11 @@ int main(int argc, char **argv)
 	    if (auth_mode == MODE_DANE)
 		goto cleanup;
 	} else if (tlsa_authenticated == 0) {
-	    fprintf(stderr, "Insecure TLSA records.\n");
+	    fprintf(stdout, "Insecure TLSA records.\n");
 	    if (auth_mode == MODE_DANE)
 		goto cleanup;
 	} else if (v4_authenticated == 0 || v6_authenticated == 0) {
-	    fprintf(stderr, "Insecure Address records.\n");
+	    fprintf(stdout, "Insecure Address records.\n");
 	    if (auth_mode == MODE_DANE)
 		goto cleanup;
 	} else {
@@ -313,15 +313,15 @@ int main(int argc, char **argv)
 
     if (!CAfile) {
 	if (!SSL_CTX_set_default_verify_paths(ctx)) {
-	    fprintf(stderr, "Failed to load default certificate authorities.\n");
-	    ERR_print_errors_fp(stderr);
+	    fprintf(stdout, "Failed to load default certificate authorities.\n");
+	    ERR_print_errors_fp(stdout);
 	    goto cleanup;
 	}
     } else {
 	if (!SSL_CTX_load_verify_locations(ctx, CAfile, NULL)) {
-	    fprintf(stderr, "Failed to load certificate authority store: %s.\n",
+	    fprintf(stdout, "Failed to load certificate authority store: %s.\n",
 		    CAfile);
-	    ERR_print_errors_fp(stderr);
+	    ERR_print_errors_fp(stdout);
 	    goto cleanup;
 	}
     }
@@ -334,7 +334,7 @@ int main(int argc, char **argv)
      */
 
     if (SSL_CTX_dane_enable(ctx) <= 0) {
-	fprintf(stderr, "Unable to enable DANE on SSL context.\n");
+	fprintf(stdout, "Unable to enable DANE on SSL context.\n");
 	goto cleanup;
     }
 
@@ -359,13 +359,14 @@ int main(int argc, char **argv)
 
         sock = socket(gaip->ai_family, SOCK_STREAM, IPPROTO_TCP);
         if (sock == -1) {
+            fprintf(stdout, "socket setup failed: %s\n", strerror(errno));
             perror("socket");
 	    count_fail++;
             continue;
         }
 
         if (connect(sock, gaip->ai_addr, gaip->ai_addrlen) == -1) {
-            perror("connect");
+            fprintf(stdout, "connect failed: %s\n", strerror(errno));
             close(sock);
 	    count_fail++;
             continue;
@@ -373,8 +374,8 @@ int main(int argc, char **argv)
 
 	ssl = SSL_new(ctx);
 	if (!ssl) {
-	    fprintf(stderr, "SSL_new() failed.\n");
-	    ERR_print_errors_fp(stderr);
+	    fprintf(stdout, "SSL_new() failed.\n");
+	    ERR_print_errors_fp(stdout);
 	    close(sock);
 	    count_fail++;
 	    continue;
@@ -389,8 +390,8 @@ int main(int argc, char **argv)
 	if (attempt_dane) {
 
 	    if (SSL_dane_enable(ssl, hostname) <= 0) {
-		fprintf(stderr, "SSL_dane_enable() failed.\n");
-		ERR_print_errors_fp(stderr);
+		fprintf(stdout, "SSL_dane_enable() failed.\n");
+		ERR_print_errors_fp(stdout);
 		SSL_free(ssl);
 		close(sock);
 		count_fail++;
@@ -400,8 +401,8 @@ int main(int argc, char **argv)
 	} else {
 
 	    if (SSL_set1_host(ssl, hostname) != 1) {
-		fprintf(stderr, "SSL_set1_host() failed.\n");
-		ERR_print_errors_fp(stderr);
+		fprintf(stdout, "SSL_set1_host() failed.\n");
+		ERR_print_errors_fp(stdout);
 		SSL_free(ssl);
 		close(sock);
 		count_fail++;
@@ -428,15 +429,15 @@ int main(int argc, char **argv)
 		rc = SSL_dane_tlsa_add(ssl, rp->usage, rp->selector, rp->mtype, 
 				       rp->data, rp->data_len);
 		if (rc < 0) {
-		    printf("SSL_dane_tlsa_add() failed.\n");
-		    ERR_print_errors_fp(stderr);
+		    fprintf(stdout, "SSL_dane_tlsa_add() failed.\n");
+		    ERR_print_errors_fp(stdout);
 		    SSL_free(ssl);
 		    close(sock);
 		    count_fail++;
 		    continue;
 		} else if (rc == 0) {
 		    cp = bin2hexstring((uint8_t *) rp->data, rp->data_len);
-		    fprintf(stderr, "Unusable TLSA record: %d %d %d %s\n",
+		    fprintf(stdout, "Unusable TLSA record: %d %d %d %s\n",
 			    rp->usage, rp->selector, rp->mtype, cp);
 		    free(cp);
 		} else
@@ -445,7 +446,7 @@ int main(int argc, char **argv)
 	}
 
 	if (auth_mode == MODE_DANE && count_tlsa_usable == 0) {
-	    fprintf(stderr, "No usable TLSA records present.\n");
+	    fprintf(stdout, "No usable TLSA records present.\n");
 	    SSL_free(ssl);
 	    close(sock);
 	    count_fail++;
@@ -454,7 +455,7 @@ int main(int argc, char **argv)
 
 	/* Do application specific STARTTLS conversation if requested */
 	if (starttls != STARTTLS_NONE && !do_starttls(starttls, sbio, service_name, hostname)) {
-	    fprintf(stderr, "STARTTLS failed.\n");
+	    fprintf(stdout, "STARTTLS failed.\n");
 	    /* shutdown sbio here cleanly */
 	    SSL_free(ssl);
 	    close(sock);
@@ -464,8 +465,8 @@ int main(int argc, char **argv)
 
 	/* Perform TLS connection handshake & peer authentication */
 	if (SSL_connect(ssl) <= 0) {
-	    fprintf(stderr, "TLS connection failed.\n");
-	    ERR_print_errors_fp(stderr);
+	    fprintf(stdout, "TLS connection failed.\n");
+	    ERR_print_errors_fp(stdout);
 	    SSL_free(ssl);
 	    close(sock);
 	    count_fail++;
@@ -492,12 +493,12 @@ int main(int argc, char **argv)
 	    if (depth >= 0) {
 		(void) SSL_get0_dane_tlsa(ssl, &usage, &selector, &mtype, 
 					  &certdata, &certdata_len);
-		printf("DANE TLSA %d %d %d [%s...] %s at depth %d\n", 
-		       usage, selector, mtype,
-		       (cp = bin2hexstring( (uint8_t *) certdata, 6)),
-		       (mspki != NULL) ? "TA public key verified certificate" :
-		       depth ? "matched TA certificate" : "matched EE certificate",
-		       depth);
+		fprintf(stdout, "DANE TLSA %d %d %d [%s...] %s at depth %d\n", 
+			usage, selector, mtype,
+			(cp = bin2hexstring( (uint8_t *) certdata, 6)),
+			(mspki != NULL) ? "TA public key verified certificate" :
+			depth ? "matched TA certificate" : "matched EE certificate",
+			depth);
 		free(cp);
 	    }
 	    if (peername != NULL) {
@@ -510,9 +511,9 @@ int main(int argc, char **argv)
 	} else {
 	    /* Authentication failed */
 	    count_fail++;
-	    fprintf(stderr, "Error: peer authentication failed. rc=%ld (%s)\n",
+	    fprintf(stdout, "Error: peer authentication failed. rc=%ld (%s)\n",
                     rcl, X509_verify_cert_error_string(rcl));
-	    ERR_print_errors_fp(stderr);
+	    ERR_print_errors_fp(stdout);
 	}
 
 	/* Shutdown and wait for peer shutdown*/

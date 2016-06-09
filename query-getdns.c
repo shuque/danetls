@@ -254,22 +254,22 @@ void cb_address(getdns_context *ctx,
     case GETDNS_RESPSTATUS_GOOD:
 	break;
     case GETDNS_RESPSTATUS_NO_NAME:
-	fprintf(stderr, "FAIL: %s: Non existent domain name.\n", hostname);
+	fprintf(stdout, "FAIL: %s: Non existent domain name.\n", hostname);
 	goto cleanup;
     case GETDNS_RESPSTATUS_ALL_TIMEOUT:
 	dns_bogus_or_indeterminate = 1;
-	fprintf(stderr, "FAIL: %s: Query timed out.\n", hostname);
+	fprintf(stdout, "FAIL: %s: Query timed out.\n", hostname);
 	goto cleanup;
     case GETDNS_RESPSTATUS_NO_SECURE_ANSWERS:
-	fprintf(stderr, "%s: Insecure address records.\n", hostname);
+	fprintf(stdout, "%s: Insecure address records.\n", hostname);
 	goto cleanup;
     case GETDNS_RESPSTATUS_ALL_BOGUS_ANSWERS:
 	dns_bogus_or_indeterminate = 1;
-	fprintf(stderr, "FAIL: %s: All bogus answers.\n", hostname);
+	fprintf(stdout, "FAIL: %s: All bogus answers.\n", hostname);
 	goto cleanup;	
     default:
         dns_bogus_or_indeterminate = 1;
-        fprintf(stderr, "FAIL: %s: error status code: %d.\n", hostname, status);
+        fprintf(stdout, "FAIL: %s: error status code: %d.\n", hostname, status);
         goto cleanup;
     }
 
@@ -287,7 +287,7 @@ void cb_address(getdns_context *ctx,
     }
 
     if (cnt_addr <= 0) {
-	printf("FAIL: %s: No addresses found.\n", hostname);
+	fprintf(stdout, "FAIL: %s: No addresses found.\n", hostname);
 	goto cleanup;
     }
 
@@ -353,22 +353,22 @@ void cb_tlsa(getdns_context *ctx,
     case GETDNS_RESPSTATUS_GOOD:
         break;
     case GETDNS_RESPSTATUS_NO_NAME:
-        fprintf(stderr, "FAIL: %s: Non existent domain name.\n", hostname);
+        fprintf(stdout, "FAIL: %s: Non existent domain name.\n", hostname);
         goto cleanup;
     case GETDNS_RESPSTATUS_ALL_TIMEOUT:
         dns_bogus_or_indeterminate = 1;
-        fprintf(stderr, "FAIL: %s: Query timed out.\n", hostname);
+        fprintf(stdout, "FAIL: %s: Query timed out.\n", hostname);
         goto cleanup;
     case GETDNS_RESPSTATUS_NO_SECURE_ANSWERS:
-        fprintf(stderr, "%s: Insecure address records.\n", hostname);
+        fprintf(stdout, "%s: Insecure address records.\n", hostname);
 	goto cleanup;
     case GETDNS_RESPSTATUS_ALL_BOGUS_ANSWERS:
         dns_bogus_or_indeterminate = 1;
-        fprintf(stderr, "FAIL: %s: All bogus answers.\n", hostname);
+        fprintf(stdout, "FAIL: %s: All bogus answers.\n", hostname);
         goto cleanup;
     default:
         dns_bogus_or_indeterminate = 1;
-        fprintf(stderr, "FAIL: %s: error status code: %d.\n", hostname, status);
+        fprintf(stdout, "FAIL: %s: error status code: %d.\n", hostname, status);
         goto cleanup;
     }
 
@@ -382,7 +382,7 @@ void cb_tlsa(getdns_context *ctx,
     (void) getdns_list_get_length(replies_tree, &num_replies);
 
     if (num_replies <= 0) {
-	printf("FAIL: %s: No response to TLSA query.\n", hostname);
+	fprintf(stdout, "FAIL: %s: No response to TLSA query.\n", hostname);
 	dns_bogus_or_indeterminate = 1;
 	goto cleanup;
     }
@@ -569,7 +569,7 @@ int do_dns_queries(const char *hostname, uint16_t port)
 	rc = getdns_general(context, domainstring, GETDNS_RRTYPE_TLSA, extensions, 
 			    (void *) qip, &tid, cb_tlsa);
 	if (rc != GETDNS_RETURN_GOOD) {
-	    fprintf(stderr, "ERROR: %s getdns_general TLSA failed: %s\n", 
+	    fprintf(stderr, "ERROR: %s getdns_general() TLSA failed: %s\n", 
 		    domainstring, getdns_get_errorstr_by_id(rc));
 	    event_base_free(evb);
 	    getdns_context_destroy(context);

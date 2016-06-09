@@ -198,7 +198,7 @@ ldns_rr_list *get_addresses_type(ldns_resolver *resolver,
 
     if (ldns_p == (ldns_pkt *) NULL) {
         dns_bogus_or_indeterminate = 1;
-	fprintf(stderr, "No response to address query.\n");
+	fprintf(stdout, "No response to address query.\n");
         return NULL;
     }
 
@@ -210,7 +210,7 @@ ldns_rr_list *get_addresses_type(ldns_resolver *resolver,
 	break;
     default:
 	dns_bogus_or_indeterminate = 1;
-        fprintf(stderr, "Error: address query failed; rcode=%d.\n", rcode);
+        fprintf(stdout, "Error: address query failed; rcode=%d.\n", rcode);
         ldns_pkt_free(ldns_p);
         return NULL;
     }
@@ -274,7 +274,7 @@ tlsa_rdata *get_tlsa(ldns_resolver *resolver,
 
     if (ldns_p == (ldns_pkt *) NULL) {
         dns_bogus_or_indeterminate = 1;
-        fprintf(stderr, "No response to TLSA query.\n");
+        fprintf(stdout, "No response to TLSA query.\n");
         return NULL;
     }
 
@@ -284,12 +284,12 @@ tlsa_rdata *get_tlsa(ldns_resolver *resolver,
     case LDNS_RCODE_NOERROR:
 	break;
     case LDNS_RCODE_NXDOMAIN:
-        fprintf(stderr, "No TLSA records found.\n");
+        fprintf(stdout, "No TLSA records found.\n");
         ldns_pkt_free(ldns_p);
         return NULL;
     default:
 	dns_bogus_or_indeterminate = 1;
-        fprintf(stderr, "Error: TLSA query failed; rcode=%d.\n", rcode);
+        fprintf(stdout, "Error: TLSA query failed; rcode=%d.\n", rcode);
         ldns_pkt_free(ldns_p);
         return NULL;
     }
@@ -298,13 +298,13 @@ tlsa_rdata *get_tlsa(ldns_resolver *resolver,
 					    LDNS_SECTION_ANSWER);
 
     if (tlsa_rr_list == NULL) {
-        fprintf(stderr, "No TLSA records found.\n");
+        fprintf(stdout, "No TLSA records found.\n");
         ldns_pkt_free(ldns_p);
 	return NULL;
     }
 
     if (! ldns_pkt_ad(ldns_p)) {
-	fprintf(stderr, "Unauthenticated response for TLSA record set.\n");
+	fprintf(stdout, "Unauthenticated response for TLSA record set.\n");
         ldns_pkt_free(ldns_p);
         return NULL;
     }
@@ -342,7 +342,7 @@ ldns_resolver *get_resolver(char *conffile)
 
     ldns_rc = ldns_resolver_new_frm_file(&resolver, conffile);
     if (ldns_rc != LDNS_STATUS_OK) {
-	fprintf(stderr, "failed to initialize DNS resolver: %s\n",
+	fprintf(stdout, "failed to initialize DNS resolver: %s\n",
 		ldns_get_errorstr_by_id(ldns_rc));
 	return NULL;
     }
