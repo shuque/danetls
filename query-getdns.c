@@ -230,8 +230,10 @@ void cb_address(getdns_context *ctx,
     switch (cb_type) {
     case GETDNS_CALLBACK_COMPLETE:
 	break;
-    case GETDNS_CALLBACK_CANCEL:
     case GETDNS_CALLBACK_TIMEOUT:
+	fprintf(stderr, "Callback: address query timed out: %s\n", hostname);
+	return;
+    case GETDNS_CALLBACK_CANCEL:
     case GETDNS_CALLBACK_ERROR:
     default:
 	fprintf(stderr, "Callback address fail: %s, tid=%"PRIu64" rc=%d\n",
@@ -338,8 +340,10 @@ void cb_tlsa(getdns_context *ctx,
     switch (cb_type) {
     case GETDNS_CALLBACK_COMPLETE:
         break;
-    case GETDNS_CALLBACK_CANCEL:
     case GETDNS_CALLBACK_TIMEOUT:
+	fprintf(stderr, "Callback: TLSA query timed out: %s\n", hostname);
+	return;
+    case GETDNS_CALLBACK_CANCEL:
     case GETDNS_CALLBACK_ERROR:
     default:
         fprintf(stderr, "Callback address fail: %s/TLSA, tid=%"PRIu64" rc=%d\n",
@@ -409,7 +413,7 @@ void cb_tlsa(getdns_context *ctx,
             auth_count++;
             break;
         case GETDNS_DNSSEC_INSECURE:
-            fprintf(stdout, "TLSA response %zu is insecure.\n", i);
+            fprintf(stdout, "TLSA response %s is insecure.\n", hostname);
             break;
         default:
             dns_bogus_or_indeterminate = 1;
@@ -550,7 +554,7 @@ int do_dns_queries(const char *hostname, uint16_t port)
     rc = getdns_address(context, hostname, extensions, 
 			(void *) qip, &tid, cb_address);
     if (rc != GETDNS_RETURN_GOOD) {
-	fprintf(stderr, "ERROR: %s getdns_address failed: %s\n", 
+	fprintf(stderr, "ERROR: %s address query failed: %s\n",
 		hostname, getdns_get_errorstr_by_id(rc));
 	event_base_free(evb);
 	getdns_context_destroy(context);
@@ -569,7 +573,7 @@ int do_dns_queries(const char *hostname, uint16_t port)
 	rc = getdns_general(context, domainstring, GETDNS_RRTYPE_TLSA, extensions, 
 			    (void *) qip, &tid, cb_tlsa);
 	if (rc != GETDNS_RETURN_GOOD) {
-	    fprintf(stderr, "ERROR: %s getdns_general() TLSA failed: %s\n", 
+	    fprintf(stderr, "ERROR: %s TLSA query failed: %s\n",
 		    domainstring, getdns_get_errorstr_by_id(rc));
 	    event_base_free(evb);
 	    getdns_context_destroy(context);
