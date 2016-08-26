@@ -97,7 +97,7 @@ int parse_options(const char *progname, int argc, char **argv)
 	    else if (strcmp(optarg, "xmpp-server") == 0)
 		starttls = STARTTLS_XMPP_SERVER;
 	    else {
-		fprintf(stderr, "Unsupported STARTTLS application: %s.\n",
+		fprintf(stdout, "Unsupported STARTTLS application: %s.\n",
 			optarg);
 		print_usage(progname);
 	    }
@@ -143,7 +143,7 @@ void print_cert_chain(STACK_OF(X509) *chain)
         for (i = 0; i < san_count; i++) {
             const GENERAL_NAME *name = sk_GENERAL_NAME_value(subjectaltnames, i);
             if (name->type == GEN_DNS) {
-                char *dns_name = (char *) ASN1_STRING_data(name->d.dNSName);
+                char *dns_name = (char *) ASN1_STRING_get0_data(name->d.dNSName);
                 fprintf(stdout, " SAN dNSName: %s\n", dns_name);
             }
         }
@@ -233,7 +233,7 @@ int main(int argc, char **argv)
 
     rc = do_dns_queries(hostname, port);
     if (rc != 1) {
-	fprintf(stderr, "DNS query dispatch failed.\n");
+	fprintf(stdout, "DNS query dispatch failed.\n");
 	goto cleanup;
     }
 
@@ -242,12 +242,12 @@ int main(int argc, char **argv)
      */
 
     if (dns_bogus_or_indeterminate) {
-	fprintf(stderr, "DNSSEC status of responses is bogus or indeterminate.\n");
+	fprintf(stdout, "DNSSEC status of responses is bogus or indeterminate.\n");
         goto cleanup;
     }
 
     if (addresses == NULL) {
-	fprintf(stderr, "No address records found, exiting.\n");
+	fprintf(stdout, "No address records found, exiting.\n");
 	goto cleanup;
     }
 
