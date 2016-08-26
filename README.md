@@ -30,7 +30,7 @@ if STARTTLS was used, the application specific STARTTLS conversation
 that took place.
 
 Pre-requisites:  
-- OpenSSL version 1.1.0-pre3 or later
+- OpenSSL version 1.1.0 or later
 - [ldns library](http://www.nlnetlabs.nl/projects/ldns/), for ldns version
 - [getdns library](http://getdnsapi.net/), for getdns version
 
