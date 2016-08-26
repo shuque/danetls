@@ -105,11 +105,11 @@ int do_starttls(enum APP_STARTTLS starttls, BIO *sbio,
 	    if (reply_code == 220)
 		rc = 1;
 	    else
-		fprintf(stderr, "Invalid response to STARTTLS: %s\n", buffer);
+		fprintf(stdout, "Invalid response to STARTTLS: %s\n", buffer);
 	} else if (reply_code != 250) {
-	    fprintf(stderr, "Invalid reply code to SMTP EHLO: %d\n", reply_code);
+	    fprintf(stdout, "Invalid reply code to SMTP EHLO: %d\n", reply_code);
 	} else {
-	    fprintf(stderr, "Unable to find STARTTLS in SMTP EHLO response.\n");
+	    fprintf(stdout, "Unable to find STARTTLS in SMTP EHLO response.\n");
 	}
 	break;
     }
@@ -143,7 +143,7 @@ int do_starttls(enum APP_STARTTLS starttls, BIO *sbio,
 	    }
 	}
 	if (!seen_starttls)
-	    fprintf(stderr, "Unable to find STARTTLS in XMPP response.\n");
+	    fprintf(stdout, "Unable to find STARTTLS in XMPP response.\n");
 	else {
 	    snprintf(buffer, sizeof(buffer),
 		     "<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>");
@@ -162,7 +162,7 @@ int do_starttls(enum APP_STARTTLS starttls, BIO *sbio,
 	break;
     }
     default:
-	fprintf(stderr, "STARTTLS application not implemented.\n");
+	fprintf(stdout, "STARTTLS application not implemented.\n");
 	break;
     }
     return rc;
