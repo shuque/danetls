@@ -8,7 +8,7 @@ specified TLS server and port, connects to the server, establishes a
 TLS session, and attempts to authenticate the server certificate with 
 the DANE TLSA record(s). If no TLSA records are found, it falls back 
 to traditional PKIX authentication. Uses the DANE verification code 
-in OpenSSL 1.1.0-pre3 or later.
+in OpenSSL 1.1.0 or later.
 
 Command line options can specify whether to do DANE or PKIX modes,
 an alternate certificate store file, and what STARTTLS application
