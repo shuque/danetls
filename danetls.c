@@ -1,18 +1,8 @@
 /*
- * Program to test new OpenSSL DANE verification code (2016-01).
- * Requires OpenSSL 1.1.0-pre2 or later.
+ * Program to test DANE TLS services.
+ * Requires OpenSSL 1.1.0 or later.
  *
- * Uses ldns to query address & TLSA records, assuming trusted path to a
- * validating resolver that returns AD bit for authenticated results, when 
- * we query with AD=1.
- * Connects to given host and port, establishes TLS session, and 
- * attempts to authenticate peer with DANE first, and lacking TLSA
- * records, falling back to normal PKIX authentication.
- *
- * Command line options can specify whether to do DANE or PKIX modes,
- * an alternate certificate store file, and what STARTTLS application 
- * protocol should be used (currently there is STARTTLS support for SMTP
- * and XMPP only - the most widely deployed DANE STARTTLS applications).
+ * This version uses ldns to query the DNS records.
  *
  * Author: Shumon Huque <shuque@gmail.com>
  */
@@ -49,6 +39,7 @@ int debug = 0;
 enum AUTH_MODE auth_mode = MODE_BOTH;
 char *CAfile = NULL;
 char *service_name = NULL;
+int dane_ee_check_name = 0;
 
 
 /*
@@ -59,14 +50,15 @@ void print_usage(const char *progname)
 {
     fprintf(stdout, "\n%s version %s\n"
 	    "\nUsage: %s [options] <hostname> <portnumber>\n\n"
-            "       -h:             print this help message\n"
-            "       -d:             debug mode\n"
-	    "       -n <name>:      service name\n"
-	    "       -c <cafile>:    CA file\n"
-            "       -m <dane|pkix>: dane or pkix mode\n"
-	    "                       (default is dane & fallback to pkix)\n"
-	    "       -s <app>:       use starttls with specified application\n"
-	    "                       ('smtp', 'xmpp-client', 'xmpp-server')\n"
+	    "       -h:                    print this help message\n"
+	    "       -d:                    debug mode\n"
+	    "       -n <name>:             service name\n"
+	    "       -c <cafile>:           CA file\n"
+	    "       -m <dane|pkix>:        dane or pkix mode\n"
+	    "                              (default is dane & fallback to pkix)\n"
+	    "       -s <app>:              use starttls with specified application\n"
+	    "                              ('smtp', 'xmpp-client', 'xmpp-server')\n"
+	    "       --dane-ee-check-name:  perform name checks for DANE-EE mode\n"
 	    "\n",
 	    progname, PROGRAM_VERSION, progname);
     exit(3);
@@ -79,10 +71,18 @@ void print_usage(const char *progname)
 
 int parse_options(const char *progname, int argc, char **argv)
 {
-    int opt;
+    int c;
+    int longindex = 0;
 
-    while ((opt = getopt(argc, argv, "hdn:c:m:s:")) != -1) {
-        switch(opt) {
+    static struct option long_options[] = {
+	{ "dane-ee-check-name", no_argument, &dane_ee_check_name, 1 },
+	{ 0, 0, 0, 0 }
+    };
+
+    while ((c = getopt_long(argc, argv, "hdn:c:m:s:",
+			    long_options, &longindex)) != -1) {
+        switch(c) {
+	case 0: break;
         case 'h': print_usage(progname); break;
         case 'd': debug = 1; break;
 	case 'n':
@@ -336,6 +336,14 @@ int main(int argc, char **argv)
     if (SSL_CTX_dane_enable(ctx) <= 0) {
 	fprintf(stdout, "Unable to enable DANE on SSL context.\n");
 	goto cleanup;
+    }
+
+    /*
+     * Disable peer name checks for DANE-EE modes, unless requested.
+     */
+
+    if (!dane_ee_check_name) {
+	(void) SSL_CTX_dane_set_flags(ctx, DANE_FLAG_NO_DANE_EE_NAMECHECKS);
     }
 
     /*
