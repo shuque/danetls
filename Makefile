@@ -9,7 +9,6 @@ INSTALL_PROG	= $(INSTALL)
 INSTALL_DATA	= $(INSTALL) -m 644
 
 PROG    = danetls danetls-getdns
-#PROG    = danetls danetls-getdns chainclient chainserver
 
 INCLUDE = -I. -I/usr/local/openssl/include -I/usr/local/include
 CFLAGS  = -g -Wall -Wextra $(INCLUDE)
@@ -24,17 +23,11 @@ CC      = cc
 
 all:		$(PROG)
 
-danetls:	danetls.o query-ldns.o utils.o starttls.o
+danetls:	danetls.o query-ldns.o utils.o tls.o starttls.o tlsardata.o
 		$(CC) $(LDFLAGS) -o $@ $^ $(LIBS_LDNS)
 
-danetls-getdns:	danetls-getdns.o query-getdns.o utils.o starttls.o
+danetls-getdns:	danetls-getdns.o query-getdns.o utils.o tls.o starttls.o tlsardata.o
 		$(CC) $(LDFLAGS) -o $@ $^ $(LIBS_GETDNS)
-
-chainclient:	chainclient.o query-ldns.o utils.o starttls.o
-		$(CC) $(LDFLAGS) -o $@ $^ $(LIBS_LDNS)
-
-chainserver:	chainserver.o query-ldns.o utils.o
-		$(CC) $(LDFLAGS) -o $@ $^ $(LIBS_LDNS)
 
 install:	$(PROG)
 		$(INSTALL_PROG) $(PROG) $(BINDIR)

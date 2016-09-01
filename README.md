@@ -37,14 +37,15 @@ Pre-requisites:
 ```
 Usage: danetls [options] <hostname> <portnumber>
 
-       -h:             print this help message
-       -d:             debug mode
-       -n <name>:      service name
-       -c <cafile>:    CA file
-       -m <dane|pkix>: dane or pkix mode
-                       (default is dane & fallback to pkix)
-       -s <app>:       use starttls with specified application
-                       ('smtp', 'xmpp-client', 'xmpp-server')
+       -h:                    print this help message
+       -d:                    debug mode
+       -n <name>:             service name
+       -c <cafile>:           CA file
+       -m <dane|pkix>:        dane or pkix mode
+                              (default is dane & fallback to pkix)
+       -s <app>:              use starttls with specified application
+                              ('smtp', 'xmpp-client', 'xmpp-server')
+       --dane-ee-check-name:  perform name checks for DANE-EE mode
 ```
 
 Some sample output follows.

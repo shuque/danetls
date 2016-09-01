@@ -114,35 +114,12 @@ struct addrinfo *make_addrinfo(getdns_dict *address,
 
 
 /*
- * tlsa_rdata: structure to hold TLSA record rdata.
+ * tlsa_count: count of TLSA records.
  * tlsa_rdata_list: linked list of tlsa_rdata structures.
  */
 
 size_t tlsa_count = 0;
 tlsa_rdata *tlsa_rdata_list = NULL;
-
-tlsa_rdata *
-insert_tlsa_rdata(tlsa_rdata *current, tlsa_rdata *new)
-{
-    if (current == NULL)
-        tlsa_rdata_list = new;
-    else
-        current->next = new;
-    return new;
-}
-
-void free_tlsa(tlsa_rdata *head)
-{
-    tlsa_rdata *current;
-
-    while ((current = head) != NULL) {
-        head = head->next;
-        free(current->data);
-        free(current);
-    }
-    return;
-}
-
 
 #define UNUSED_PARAM(x) ((void) (x))
 
@@ -481,7 +458,7 @@ void cb_tlsa(getdns_context *ctx,
 	    rp->data = malloc(certdata->size);
 	    memcpy(rp->data, certdata->data, certdata->size);
 	    rp->next = NULL;
-	    current = insert_tlsa_rdata(current, rp);
+	    current = insert_tlsa_rdata(&tlsa_rdata_list, current, rp);
 	    tlsa_count++;
 	}
     }
