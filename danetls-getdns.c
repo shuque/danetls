@@ -154,8 +154,7 @@ int main(int argc, char **argv)
      * Obtain address and TLSA records with getdns library calls
      */
 
-    rc = do_dns_queries(hostname, port);
-    if (rc != 1) {
+    if (do_dns_queries(hostname, port) != 1) {
 	fprintf(stdout, "DNS query dispatch failed.\n");
 	goto cleanup;
     }
