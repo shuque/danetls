@@ -14,8 +14,6 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
-#include <ldns/ldns.h>
-
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 #include <openssl/x509v3.h>
@@ -367,13 +365,13 @@ cleanup:
      * 3: Program usage error.
      */
     if (count_success > 0 && count_fail == 0) {
-	fprintf(stdout, "[0] Authentication succeeded for all peers.\n");
+	fprintf(stdout, "[0] Authentication succeeded for all (%d) peers.\n", count_success);
         return 0;
     } else if (count_success > 0 && count_fail != 0) {
-	fprintf(stdout, "[1] Authentication succeeded for some but not all peers.\n");
+	fprintf(stdout, "[1] Authentication succeeded for some but not all peers (%d of %d).\n", count_success, (count_success + count_fail));
         return 1;
     } else {
-	fprintf(stdout, "[2] Authentication failed for all peers.\n");
+	fprintf(stdout, "[2] Authentication failed for all (%d) peers.\n", count_fail);
         return 2;
     }
 }
