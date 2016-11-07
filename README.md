@@ -311,6 +311,27 @@ Validated Certificate chain:
 [0] Authentication succeeded for all (1) peers.
 ```
 
+Check an IMAP STARTTLS service (gives error because of self-signed certificate
+and no DANE record):
+```
+$ danetls -d -s imap obscured.huque.com 143
+FAIL: _143._tcp.obscured.huque.com: Non existent domain name.
+No TLSA records found.
+Connecting to IPv6 address: 2604:a880:800:1e::dead:beef port 143
+recv: * OK [CAPABILITY IMAP4rev1 LITERAL+ SASL-IR LOGIN-REFERRALS ID ENABLE IDLE STARTTLS LOGINDISABLED] Dovecot ready.
+send: . CAPABILITY
+recv: * CAPABILITY IMAP4rev1 LITERAL+ SASL-IR LOGIN-REFERRALS ID ENABLE IDLE STARTTLS LOGINDISABLED
+recv: . OK Pre-login capabilities listed, post-login capabilities have more.
+send: . STARTTLS
+recv: . OK Begin TLS negotiation now.
+TLSv1.2 handshake succeeded.
+Cipher: TLSv1.2 ECDHE-RSA-AES256-GCM-SHA384
+Peer Certificate chain:
+ 0 Subject CN: obscured.huque.com
+   Issuer  CN: obscured.huque.com
+Error: peer authentication failed. rc=18 (self signed certificate)
+```
+
 ### Other examples
 
 TBD ...
