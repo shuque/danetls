@@ -113,6 +113,75 @@ int do_starttls(enum APP_STARTTLS starttls, BIO *sbio,
 	}
 	break;
     }
+    case STARTTLS_IMAP: {
+	int seen_starttls = 0;
+	BIO *fbio = BIO_new(BIO_f_buffer());
+	BIO_push(fbio, sbio);
+	BIO_gets(fbio, buffer, MYBUFSIZE);
+	if (debug) {
+	    cp = strstr(buffer, "\r\n");
+	    *cp = '\0';
+	    fprintf(stdout, "recv: %s\n", buffer);
+	    fprintf(stdout, "send: . CAPABILITY\n");
+	}
+	BIO_printf(fbio, ". CAPABILITY\r\n");
+	(void) BIO_flush(fbio);
+	while (1) {
+	    read_len = BIO_gets(fbio, buffer, MYBUFSIZE);
+            if (debug) {
+                cp = strstr(buffer, "\r\n");
+                *cp = '\0';
+                fprintf(stdout, "recv: %s\n", buffer);
+            }
+	    if (strstr(buffer, "STARTTLS"))
+                seen_starttls = 1;
+	    if (read_len <= 3 || buffer[0] == '.')
+		break;
+	}
+	(void) BIO_flush(fbio);
+	BIO_pop(fbio);
+	BIO_free(fbio);
+	if (seen_starttls) {
+	    if (debug) {
+		fprintf(stdout, "send: . STARTTLS\n");
+	    }
+	    BIO_printf(sbio, ". STARTTLS\r\n");
+	    BIO_read(sbio, buffer, MYBUFSIZE);
+            if (debug) {
+                cp = strstr(buffer, "\r\n");
+                *cp = '\0';
+                fprintf(stdout, "recv: %s\n", buffer);
+            }
+	    if (strncmp(buffer, ". OK", 4) == 0)
+		rc = 1;
+	    else
+		fprintf(stdout, "ERROR: STARTTLS ready response failed.\n");
+	} else {
+	    fprintf(stdout, "ERROR: no STARTTLS capability found.\n");
+	}
+	break;
+    }
+    case STARTTLS_POP3: {
+	BIO_read(sbio, buffer, MYBUFSIZE);
+	if (debug) {
+	    cp = strstr(buffer, "\r\n");
+	    *cp = '\0';
+	    fprintf(stdout, "recv: %s\n", buffer);
+	    fprintf(stdout, "send: STLS\n");
+	}
+	BIO_printf(sbio, "STLS\r\n");
+	BIO_read(sbio, buffer, MYBUFSIZE);
+	if (debug) {
+	    cp = strstr(buffer, "\r\n");
+	    *cp = '\0';
+	    fprintf(stdout, "recv: %s\n", buffer);
+	}
+	if (strncmp(buffer, "+OK", 3) == 0)
+	    rc = 1;
+	else
+	    fprintf(stdout, "ERROR: Didn't get +OK in response to STARTTLS.\n");
+	break;
+    }
     case STARTTLS_XMPP_CLIENT:
     case STARTTLS_XMPP_SERVER: {
 	int readn, seen_starttls = 0;	

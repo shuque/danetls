@@ -1,7 +1,7 @@
 #ifndef __COMMON_H__
 #define __COMMON_H__
 
-#define PROGRAM_VERSION "0.2"
+#define PROGRAM_VERSION "0.3"
 
 enum AUTH_MODE {
     MODE_BOTH=0,

@@ -12,8 +12,8 @@ in OpenSSL 1.1.0 or later.
 
 Command line options can specify whether to do DANE or PKIX modes,
 an alternate certificate store file, and what STARTTLS application
-protocol should be used (currently there is STARTTLS support for SMTP
-and XMPP only - the two most widely deployed DANE STARTTLS applications).
+protocol should be used (currently there is STARTTLS support for SMTP,
+XMPP, POP3, and IMAP - the most widely deployed DANE STARTTLS applications).
 
 There are two versions of this program. "danetls", which uses ldns 
 to perform the DNS queries, and "danetls-getdns", which uses the 
@@ -44,7 +44,7 @@ Usage: danetls [options] <hostname> <portnumber>
        -m <dane|pkix>:        dane or pkix mode
                               (default is dane & fallback to pkix)
        -s <app>:              use starttls with specified application
-                              ('smtp', 'xmpp-client', 'xmpp-server')
+                              (smtp, imap, pop3, xmpp-client, xmpp-server)
        --dane-ee-check-name:  perform name checks for DANE-EE mode
 ```
 
@@ -277,6 +277,38 @@ Validated Certificate chain:
    Issuer  CN: SwissSign Server Silver CA 2014 - G22
  SAN dNSName: *.mailbox.org
  SAN dNSName: mailbox.org
+```
+
+Checking the POP3 (STARTTLS) service (DANE only) at pop3.mailbox.org:
+```
+$ danetls -d -m dane -s pop3 pop3.mailbox.org 110
+
+TLSA records found: 1
+TLSA: 3 1 1 4758af6f02dfb5dc8795fa402e77a8a0486af5e85d2ca60c294476aadc40b220
+
+Connecting to IPv4 address: 80.241.60.199 port 110
+recv: +OK director-02.heinlein-hosting.de: Dovecot ready. Master.
+send: STLS
+recv: +OK Begin TLS negotiation now.
+TLSv1.2 handshake succeeded.
+Cipher: TLSv1.2 DHE-RSA-AES256-GCM-SHA384
+Peer Certificate chain:
+ 0 Subject CN: *.mailbox.org
+   Issuer  CN: SwissSign Server Silver CA 2014 - G22
+ 1 Subject CN: SwissSign Server Silver CA 2014 - G22
+   Issuer  CN: SwissSign Silver CA - G2
+ 2 Subject CN: SwissSign Silver CA - G2
+   Issuer  CN: SwissSign Silver CA - G2
+ SAN dNSName: *.mailbox.org
+ SAN dNSName: mailbox.org
+DANE TLSA 3 1 1 [4758af6f02df...] matched EE certificate at depth 0
+Validated Certificate chain:
+ 0 Subject CN: *.mailbox.org
+   Issuer  CN: SwissSign Server Silver CA 2014 - G22
+ SAN dNSName: *.mailbox.org
+ SAN dNSName: mailbox.org
+
+[0] Authentication succeeded for all (1) peers.
 ```
 
 ### Other examples

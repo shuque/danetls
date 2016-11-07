@@ -60,7 +60,7 @@ void print_usage(const char *progname)
 	    "       -m <dane|pkix>:        dane or pkix mode\n"
 	    "                              (default is dane & fallback to pkix)\n"
 	    "       -s <app>:              use starttls with specified application\n"
-	    "                              ('smtp', 'xmpp-client', 'xmpp-server')\n"
+	    "                              (smtp, imap, pop3, xmpp-client, xmpp-server)\n"
 	    "       --dane-ee-check-name:  perform name checks for DANE-EE mode\n"
 	    "\n",
 	    progname, PROGRAM_VERSION, progname);
@@ -104,6 +104,10 @@ int parse_options(const char *progname, int argc, char **argv)
 	case 's': 
 	    if (strcmp(optarg, "smtp") == 0)
 	        starttls = STARTTLS_SMTP;
+	    else if (strcmp(optarg, "imap") == 0)
+		starttls = STARTTLS_IMAP;
+	    else if (strcmp(optarg, "pop3") == 0)
+		starttls = STARTTLS_POP3;
 	    else if (strcmp(optarg, "xmpp-client") == 0)
 		starttls = STARTTLS_XMPP_CLIENT;
 	    else if (strcmp(optarg, "xmpp-server") == 0)
