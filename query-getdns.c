@@ -16,6 +16,7 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <errno.h>
+#include <openssl/ssl.h>
 
 #include <getdns/getdns.h>
 #include <getdns/getdns_extra.h>
@@ -26,8 +27,10 @@
     #include <event.h>
 #endif
 
-#include "common.h"
 #include "query-getdns.h"
+#include "utils.h"
+#include "common.h"
+#include "starttls.h"
 
 extern int debug;
 extern int recursion;
@@ -313,6 +316,7 @@ void cb_tlsa(getdns_context *ctx,
     getdns_list    *replies_tree, *answer;
     size_t         i, j, num_replies, num_answers;
     getdns_dict    *reply;
+    char *cp;
 
     switch (cb_type) {
     case GETDNS_CALLBACK_COMPLETE:
@@ -448,6 +452,18 @@ void cb_tlsa(getdns_context *ctx,
 		fprintf(stderr, "FAIL: %s/TLSA: getting certdata: %s\n",
 			hostname, getdns_get_errorstr_by_id(rc));
 		break;
+	    }
+
+	    if ((starttls == STARTTLS_SMTP) && (smtp_any_mode != 1)) {
+		if (!(usage == 2 || usage == 3)) {
+		    fprintf(stdout, "TLSA record with invalid usage mode "
+			    "for SMTP: %d %d %d [%s..].\n",
+			    usage, selector, mtype,
+			    (cp = bin2hexstring( (uint8_t *) certdata->data,
+						 (certdata->size > 6) ? 6: certdata->size)));
+		    free(cp);
+		    continue;
+		}
 	    }
 
 	    tlsa_rdata *rp = (tlsa_rdata *) malloc(sizeof(tlsa_rdata));

@@ -20,6 +20,8 @@
 #include <ldns/ldns.h>
 #include "query-ldns.h"
 #include "utils.h"
+#include "common.h"
+#include "starttls.h"
 
 
 /*
@@ -211,7 +213,7 @@ tlsa_rdata *get_tlsa(ldns_resolver *resolver,
 		     const char *hostname, uint16_t port)
 {
     size_t i;
-    char domainstring[512];
+    char domainstring[512], *cp;
     ldns_rdf *tlsa_owner;
     ldns_pkt *ldns_p;
     ldns_rr_list *tlsa_rr_list;
@@ -273,6 +275,17 @@ tlsa_rdata *get_tlsa(ldns_resolver *resolver,
 	rp->data_len = ldns_rdf_size(ldns_rr_rdf(tlsa_rr, 3));
 	rp->data = ldns_rdf_data(ldns_rr_rdf(tlsa_rr, 3));
 	rp->next = NULL;
+	if ((starttls == STARTTLS_SMTP) && (smtp_any_mode != 1)) {
+	    if (!(rp->usage == 2 || rp->usage == 3)) {
+		fprintf(stdout, "TLSA record with invalid usage mode: "
+			"%d %d %d [%s..].\n",
+			rp->usage, rp->selector, rp->mtype,
+			(cp = bin2hexstring( (uint8_t *) rp->data,
+					     (rp->data_len > 6) ? 6: rp->data_len)));
+		free(cp);
+		continue;
+	    }
+	}
 	current = insert_tlsa_rdata(&tlsa_rdata_list, current, rp);
     }
 

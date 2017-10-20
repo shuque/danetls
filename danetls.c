@@ -42,7 +42,7 @@ enum AUTH_MODE auth_mode = MODE_BOTH;
 char *CAfile = NULL;
 char *service_name = NULL;
 int dane_ee_check_name = 0;
-
+int smtp_any_mode = 0;
 
 /*
  * usage(): Print usage string and exit.
@@ -61,6 +61,8 @@ void print_usage(const char *progname)
 	    "       -s <app>:              use starttls with specified application\n"
 	    "                              (smtp, imap, pop3, xmpp-client, xmpp-server)\n"
 	    "       --dane-ee-check-name:  perform name checks for DANE-EE mode\n"
+	    "       --smtp-any-mode:       allow any usage mode for SMTP\n"
+	    "                              (normally only modes 2 or 3 are allowed)\n"
 	    "\n",
 	    progname, PROGRAM_VERSION, progname);
     exit(3);
@@ -78,6 +80,7 @@ int parse_options(const char *progname, int argc, char **argv)
 
     static struct option long_options[] = {
 	{ "dane-ee-check-name", no_argument, &dane_ee_check_name, 1 },
+	{ "smtp-any-mode", no_argument, &smtp_any_mode, 1 },
 	{ 0, 0, 0, 0 }
     };
 

@@ -112,7 +112,7 @@ int do_tls(const char *hostname,
     char ipstring[INET6_ADDRSTRLEN], *cp;
     struct sockaddr_in *sa4;
     struct sockaddr_in6 *sa6;
-    int count_success = 0, count_fail = 0, count_tlsa_usable=0;
+    int count_success = 0, count_fail = 0, count_tlsa_usable = 0;
     int rc, sock;
     long rcl;
 

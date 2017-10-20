@@ -15,5 +15,6 @@ extern enum AUTH_MODE auth_mode;
 extern char *CAfile;
 extern char *service_name;
 extern int dane_ee_check_name;
+extern int smtp_any_mode;
 
 #endif /* __COMMON_H__ */
