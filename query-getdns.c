@@ -503,6 +503,8 @@ int do_dns_queries(const char *hostname, uint16_t port)
     getdns_context *context = NULL;
     getdns_dict *extensions = NULL;
     getdns_return_t rc;
+    getdns_transaction_t tid_addr = 0, tid_tlsa = 0;
+    qinfo *qip_addr, *qip_tlsa;
     struct event_base *evb;
 
     rc = getdns_context_create(&context, 1);
@@ -535,17 +537,15 @@ int do_dns_queries(const char *hostname, uint16_t port)
 
     (void) getdns_extension_set_libevent_base(context, evb);
 
-    getdns_transaction_t tid = 0;
-
     /*
      * Address Records lookup
      */
-    qinfo *qip = (qinfo *) malloc(sizeof(qinfo));
-    qip->qname = hostname;
-    qip->qtype = GETDNS_RRTYPE_A;
-    qip->port = port;
+    qip_addr = (qinfo *) malloc(sizeof(qinfo));
+    qip_addr->qname = hostname;
+    qip_addr->qtype = GETDNS_RRTYPE_A;
+    qip_addr->port = port;
     rc = getdns_address(context, hostname, extensions, 
-			(void *) qip, &tid, cb_address);
+			(void *) qip_addr, &tid_addr, cb_address);
     if (rc != GETDNS_RETURN_GOOD) {
 	fprintf(stderr, "ERROR: %s address query failed: %s\n",
 		hostname, getdns_get_errorstr_by_id(rc));
@@ -558,13 +558,15 @@ int do_dns_queries(const char *hostname, uint16_t port)
      * TLSA Records lookup
      */
     if (auth_mode != MODE_PKIX) {
-	snprintf(domainstring, sizeof(domainstring), "_%d._tcp.%s", port, hostname);
-	qip = (qinfo *) malloc(sizeof(qinfo));
-	qip->qname = domainstring;
-	qip->qtype = GETDNS_RRTYPE_TLSA;
-	qip->port = port;
-	rc = getdns_general(context, domainstring, GETDNS_RRTYPE_TLSA, extensions, 
-			    (void *) qip, &tid, cb_tlsa);
+	snprintf(domainstring, sizeof(domainstring), "_%d._tcp.%s",
+		 port, hostname);
+	qip_tlsa = (qinfo *) malloc(sizeof(qinfo));
+	qip_tlsa->qname = domainstring;
+	qip_tlsa->qtype = GETDNS_RRTYPE_TLSA;
+	qip_tlsa->port = port;
+	rc = getdns_general(context, domainstring, GETDNS_RRTYPE_TLSA,
+			    extensions,
+			    (void *) qip_tlsa, &tid_tlsa, cb_tlsa);
 	if (rc != GETDNS_RETURN_GOOD) {
 	    fprintf(stderr, "ERROR: %s TLSA query failed: %s\n",
 		    domainstring, getdns_get_errorstr_by_id(rc));

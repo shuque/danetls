@@ -346,9 +346,18 @@ int do_tls(const char *hostname,
 	    ERR_print_errors_fp(stdout);
 	}
 
-	/* Shutdown and wait for peer shutdown*/
+#if 0
+	/*
+	  Shutdown and wait for peer shutdown. This is normally the
+	  correct way to do this. But some broken SSL peer implementations
+	  can cause this code to hang waiting for the peer shutdown :(
+	 */
 	while (SSL_shutdown(ssl) == 0)
 	    ;
+#endif
+	/* Shutdown our end and exit (don't wait for peer shutdown) */
+	SSL_shutdown(ssl);
+
 	SSL_free(ssl);
 	close(sock);
 	(void) fputc('\n', stdout);

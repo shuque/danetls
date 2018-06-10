@@ -24,7 +24,7 @@ char *bin2hexstring(uint8_t *data, size_t length)
 
 /*
  * bindata2hexstring(): convert a getdns bindata input into a string of
- * hex digits.
+ * hex digits. Caller needs to free returned memory.
  */
 
 char *bindata2hexstring(getdns_bindata *b)
