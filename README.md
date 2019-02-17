@@ -32,6 +32,7 @@ that took place.
 Pre-requisites:  
 - OpenSSL version 1.1.0 or later
 - [ldns library](http://www.nlnetlabs.nl/projects/ldns/), for ldns version
+- [libevent library](https://libevent.org/) and header files
 - [getdns library](http://getdnsapi.net/), for getdns version
 
 ```
