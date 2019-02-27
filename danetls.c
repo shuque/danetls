@@ -40,6 +40,7 @@ int debug = 0;
 int attempt_dane = 0;
 enum AUTH_MODE auth_mode = MODE_BOTH;
 char *CAfile = NULL;
+char *resolvconf = NULL;
 char *service_name = NULL;
 int dane_ee_check_name = 0;
 int smtp_any_mode = 0;
@@ -56,6 +57,7 @@ void print_usage(const char *progname)
 	    "       -d:                    debug mode\n"
 	    "       -n <name>:             service name\n"
 	    "       -c <cafile>:           CA file\n"
+	    "       -f <resolvconf>:       resolver config file\n"
 	    "       -m <dane|pkix>:        dane or pkix mode\n"
 	    "                              (default is dane & fallback to pkix)\n"
 	    "       -s <app>:              use starttls with specified application\n"
@@ -84,7 +86,7 @@ int parse_options(const char *progname, int argc, char **argv)
 	{ 0, 0, 0, 0 }
     };
 
-    while ((c = getopt_long(argc, argv, "hdn:c:m:s:",
+    while ((c = getopt_long(argc, argv, "hdn:c:f:m:s:",
 			    long_options, &longindex)) != -1) {
         switch(c) {
 	case 0: break;
@@ -94,6 +96,8 @@ int parse_options(const char *progname, int argc, char **argv)
 	    service_name = optarg; break;
 	case 'c':
 	    CAfile = optarg; break;
+	case 'f':
+	    resolvconf = optarg; break;
         case 'm': 
 	    if (strcmp(optarg, "dane") == 0)
 		auth_mode = MODE_DANE;
@@ -166,7 +170,7 @@ int main(int argc, char **argv)
      * a linked list of structures holding TLSA rdata sets.
      */
 
-    resolver = get_resolver(NULL);
+    resolver = get_resolver(resolvconf);
     if (resolver == NULL)
 	goto cleanup;
     addresses = get_addresses(resolver, hostname, port);
