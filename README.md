@@ -42,11 +42,14 @@ Usage: danetls [options] <hostname> <portnumber>
        -d:                    debug mode
        -n <name>:             service name
        -c <cafile>:           CA file
+       -f <resolvconf>:       resolver config file
        -m <dane|pkix>:        dane or pkix mode
                               (default is dane & fallback to pkix)
        -s <app>:              use starttls with specified application
                               (smtp, imap, pop3, xmpp-client, xmpp-server)
        --dane-ee-check-name:  perform name checks for DANE-EE mode
+       --smtp-any-mode:       allow any usage mode for SMTP
+                              (normally only modes 2 or 3 are allowed
 ```
 
 Some sample output follows.
