@@ -128,6 +128,97 @@ tlsa_rdata *tlsa_rdata_list = NULL;
 
 
 /*
+ * make_address_dict()
+ * Return a getdns address dict for given IPv4/IPv6 address string.
+ */
+
+getdns_dict *make_address_dict(char *address_string)
+{
+    getdns_dict *address = NULL;
+    getdns_bindata *addr_data = NULL;
+    getdns_bindata addr_type_v4 = { 4, (void *) "IPv4" };
+    getdns_bindata addr_type_v6 = { 4, (void *) "IPv6" };
+
+    address = getdns_dict_create();
+
+    if (strchr(address_string, '.') != NULL) {
+	getdns_dict_set_bindata(address, "address_type", &addr_type_v4);
+	addr_data = malloc(sizeof(addr_data));
+	addr_data->data = malloc(4);
+	if (inet_pton(AF_INET, address_string, addr_data->data) != 1) {
+	    fprintf(stderr, "Invalid IPv4 address: %s\n", address_string);
+	    free(addr_data);
+	    getdns_dict_destroy(address);
+	    return address;
+	}
+	addr_data->size = 4;
+	getdns_dict_set_bindata(address, "address_data", addr_data);
+    } else if (strchr(address_string, ':') != NULL) {
+	getdns_dict_set_bindata(address, "address_type", &addr_type_v6);
+	addr_data = malloc(sizeof(addr_data));
+	addr_data->data = malloc(16);
+	if (inet_pton(AF_INET6, address_string, addr_data->data) != 1) {
+	    fprintf(stderr, "Invalid IPv6 address: %s\n", address_string);
+	    free(addr_data);
+	    getdns_dict_destroy(address);
+	    return address;
+	}
+	addr_data->size = 16;
+	getdns_dict_set_bindata(address, "address_data", addr_data);
+    }
+
+    return address;
+}
+
+
+/*
+ * set_upstream_resolvers()
+ * Use specified resolver configuration file to setup list of upstream
+ * resolvers in the getdns context.
+ */
+
+void set_upstream_resolvers(getdns_context *ctx, char *configfile)
+{
+    FILE *fp;
+    getdns_return_t rc;
+    char line[1024];
+    char *parse, *cp;
+    getdns_dict *resolver_address = NULL;
+    getdns_list *resolver_list = NULL;
+
+    if (!(fp = fopen(configfile, "r"))) {
+	fprintf(stderr, "WARNING: unable to open %s, ignoring ..", configfile);
+	return;
+    }
+
+    resolver_list = getdns_list_create();
+
+    size_t i = 0;
+    while (fgets(line, sizeof(line), fp)) {
+	parse = line;
+	if (strncmp(line, "nameserver", 10) != 0)
+	    continue;
+	parse += 10;
+	parse += strspn(parse, " \t");
+	cp = parse + strcspn(parse, " \t\r\n");
+	*cp = 0;
+	resolver_address = make_address_dict(parse);
+	if (resolver_address)
+	    getdns_list_set_dict(resolver_list, i++, resolver_address);
+    }
+
+    rc = getdns_context_set_upstream_recursive_servers(ctx, resolver_list);
+    if (rc != GETDNS_RETURN_GOOD)
+	fprintf(stderr, "WARNING: set_upstreams failed: (%d) %s\n",
+		rc, getdns_get_errorstr_by_id(rc));
+
+    (void) fclose(fp);
+    return;
+
+}
+
+
+/*
  * all_responses_secure()
  */
 
@@ -514,8 +605,13 @@ int do_dns_queries(const char *hostname, uint16_t port)
 	return 0;
     }
 
-    if (!recursion)
+    if (recursion) {
+	getdns_context_set_resolution_type(context, GETDNS_RESOLUTION_RECURSING);
+    } else {
 	getdns_context_set_resolution_type(context, GETDNS_RESOLUTION_STUB);
+	if (resolvconf)
+	    set_upstream_resolvers(context, resolvconf);
+    }
 
     if (! (extensions = getdns_dict_create())) {
 	fprintf(stderr, "FAIL: Error creating extensions dict\n");
@@ -528,6 +624,12 @@ int do_dns_queries(const char *hostname, uint16_t port)
 		getdns_get_errorstr_by_id(rc));
 	return 0;
     }
+
+#if 0
+    /* turn on for debugging getdns context settings */
+    fprintf(stdout, "%s\n",
+	    getdns_pretty_print_dict(getdns_context_get_api_information(context)));
+#endif
 
     if ( (evb = event_base_new()) == NULL ) {
 	fprintf(stderr, "FAIL: event base creation failed.\n");

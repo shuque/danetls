@@ -12,6 +12,7 @@ enum AUTH_MODE {
 extern int debug;
 extern int attempt_dane;
 extern enum AUTH_MODE auth_mode;
+extern char *resolvconf;
 extern char *CAfile;
 extern char *service_name;
 extern int dane_ee_check_name;
