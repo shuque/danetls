@@ -145,8 +145,6 @@ int main(int argc, char **argv)
     uint16_t port;
     int optcount;
 
-    SSL_CTX *ctx = NULL;
-
     if ((progname = strrchr(argv[0], '/')))
         progname++;
     else
@@ -226,8 +224,6 @@ int main(int argc, char **argv)
  cleanup:
     freeaddrinfo(addresses);
     free_tlsa(tlsa_rdata_list);
-    if (ctx)
-	SSL_CTX_free(ctx);
 
     return rc;
 }

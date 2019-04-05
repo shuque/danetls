@@ -366,6 +366,9 @@ int do_tls(const char *hostname,
 
 cleanup:
 
+    if (ctx)
+	SSL_CTX_free(ctx);
+
     /*
      * Return status:
      * 0: Authentication success for all queried peers

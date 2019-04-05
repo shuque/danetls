@@ -146,8 +146,6 @@ int main(int argc, char **argv)
     struct addrinfo *addresses = NULL;
     tlsa_rdata *tlsa_rdata_list = NULL;
 
-    SSL_CTX *ctx = NULL;
-
     if ((progname = strrchr(argv[0], '/')))
         progname++;
     else
@@ -236,8 +234,6 @@ int main(int argc, char **argv)
  cleanup:
     freeaddrinfo(addresses);
     free_tlsa(tlsa_rdata_list);
-    if (ctx)
-	SSL_CTX_free(ctx);
 
     return rc;
 }
