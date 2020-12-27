@@ -18,7 +18,7 @@
 #include <netdb.h>
 
 #include <ldns/ldns.h>
-#include "query-ldns.h"
+#include "tlsardata.h"
 #include "utils.h"
 #include "common.h"
 #include "starttls.h"

@@ -27,7 +27,7 @@
     #include <event.h>
 #endif
 
-#include "query-getdns.h"
+#include "tlsardata.h"
 #include "utils.h"
 #include "common.h"
 #include "starttls.h"
@@ -48,6 +48,16 @@ int v6_authenticated = 0;
 int mx_authenticated = 0;
 int srv_authenticated = 0;
 int tlsa_authenticated = 0;
+
+/*
+ * qinfo: structure to hold query information to be passed to
+ * callback functions.
+ */
+typedef struct qinfo {
+    const char *qname;
+    uint16_t qtype;
+    uint16_t port;
+} qinfo;
 
 /*
  * addresses: (head of) linked list of addrinfo structures

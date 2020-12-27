@@ -13,18 +13,18 @@
  * Flags: dns bogus or indeterminate; authenticated responses 
  */
 
-int dns_bogus_or_indeterminate;
-int v4_authenticated;
-int v6_authenticated;
-int mx_authenticated;
-int srv_authenticated;
-int tlsa_authenticated;
+extern int dns_bogus_or_indeterminate;
+extern int v4_authenticated;
+extern int v6_authenticated;
+extern int mx_authenticated;
+extern int srv_authenticated;
+extern int tlsa_authenticated;
 
 /*
  * addresses: (head of) linked list of addrinfo structures
  */
 
-size_t address_count;
+extern size_t address_count;
 
 struct addrinfo *
 insert_addrinfo(struct addrinfo **headp,
@@ -35,8 +35,8 @@ insert_addrinfo(struct addrinfo **headp,
  * tlsa_count and response_rcode
  */
 
-size_t tlsa_count;
-ldns_pkt_rcode tlsa_response_rcode;
+extern size_t tlsa_count;
+extern ldns_pkt_rcode tlsa_response_rcode;
 
 /*
  * get_addresses_type() and get_addresses()
